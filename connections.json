@@ -1,0 +1,19 @@
+[
+  {
+    "server": "172.26.0.68\\DEV001",
+    "database": "fb_DBAMonitor",
+    "authentication": "SQL Server Authentication",
+    "username": "SA"
+  },
+  {
+    "server": "172.26.0.68\\DEVCRAT018",
+    "database": "fb_DBAMonitor",
+    "authentication": "Windows Authentication"
+  },
+  {
+    "server": "172.26.0.68\\DEVCRAT018",
+    "authentication": "Windows Authentication",
+    "username": null,
+    "database": "fb_accountingsystem"
+  }
+]
