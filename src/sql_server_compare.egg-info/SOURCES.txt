@@ -1,6 +1,6 @@
 README.md
 pyproject.toml
-setup.py
+src/main.py
 src/sql_compare/__init__.py
 src/sql_compare/__main__.py
 src/sql_compare/core/__init__.py
@@ -17,3 +17,5 @@ src/sql_server_compare.egg-info/dependency_links.txt
 src/sql_server_compare.egg-info/entry_points.txt
 src/sql_server_compare.egg-info/requires.txt
 src/sql_server_compare.egg-info/top_level.txt
+tests/test_connection_manager.py
+tests/test_schema_comparer.py

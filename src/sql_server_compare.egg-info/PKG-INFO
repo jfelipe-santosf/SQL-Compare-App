@@ -13,7 +13,6 @@ Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: black>=23.3.0; extra == "dev"
 Requires-Dist: isort>=5.12.0; extra == "dev"
 Requires-Dist: flake8>=6.0.0; extra == "dev"
-Dynamic: requires-python
 
 # SQL Server Schema Compare
 

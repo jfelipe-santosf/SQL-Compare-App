@@ -4,8 +4,10 @@ import os
 from pathlib import Path
 
 class ConnectionManager:
-    def __init__(self):
-        self.config_file = Path('connections.json')
+    DEFAULT_CONFIG_FILE = Path('connections.json')
+    
+    def __init__(self, config_file: Optional[Path] = None):
+        self.config_file = config_file or self.DEFAULT_CONFIG_FILE
         self.recent_connections = self.load_connections()
         
     def load_connections(self) -> List[Dict]:

@@ -4,6 +4,7 @@ from typing import Optional, Dict, Set, List
 import pyodbc
 from tkinter import simpledialog
 import os
+from itertools import zip_longest
 
 from .connection_dialog import ConnectionDialog
 from ..core.schema_comparer import SchemaComparerService
@@ -131,7 +132,8 @@ class SchemaCompareApp:
         # Toolbar
         toolbar = ttk.Frame(main_container)
         toolbar.pack(fill=tk.X, padx=5, pady=2)
-          # Compare button
+        
+        # Compare button
         self.compare_btn = ttk.Button(
             toolbar, 
             text="Compare",
@@ -141,17 +143,6 @@ class SchemaCompareApp:
             compound=tk.LEFT
         )
         self.compare_btn.pack(side=tk.LEFT, padx=2)
-        
-        # Update button
-        self.update_btn = ttk.Button(
-            toolbar,
-            text="Update",
-            command=self.update_schema,
-            width=10,
-            image=self.icons.update,
-            compound=tk.LEFT
-        )
-        self.update_btn.pack(side=tk.LEFT, padx=2)
         
         # Filter button
         self.filter_btn = ttk.Button(
@@ -163,16 +154,15 @@ class SchemaCompareApp:
             compound=tk.LEFT
         )
         self.filter_btn.pack(side=tk.LEFT, padx=2)
-        
-        # Main content area
+          # Main content area
         content = ttk.Frame(main_container)
         content.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Horizontal split view
-        self.paned_window = ttk.PanedWindow(content, orient=tk.HORIZONTAL)
+        # Vertical split view
+        self.paned_window = ttk.PanedWindow(content, orient=tk.VERTICAL)
         self.paned_window.pack(fill=tk.BOTH, expand=True)
 
-        # Left panel - Results tree
+        # Top panel - Results tree
         results_frame = ttk.Frame(self.paned_window)
         self.paned_window.add(results_frame, weight=1)
           # Create treeview for displaying differences
@@ -193,11 +183,10 @@ class SchemaCompareApp:
         self.results_tree.column("Type", width=100, anchor="center")
         self.results_tree.column("Action", width=100, anchor="center")
         self.results_tree.column("Difference", width=200, anchor="w")
-        
-        # Configure tags for different states
-        self.results_tree.tag_configure("different", foreground="#FFA500")  # Orange
-        self.results_tree.tag_configure("source_only", foreground="#4CAF50")  # Green
-        self.results_tree.tag_configure("target_only", foreground="#F44336")  # Red
+          # Configure tags for different states (sem cores nos nomes dos objetos)
+        self.results_tree.tag_configure("different", foreground="black")
+        self.results_tree.tag_configure("source_only", foreground="black")
+        self.results_tree.tag_configure("target_only", foreground="black")
         
         # Add scrollbar to results
         results_scrollbar = ttk.Scrollbar(results_frame, orient=tk.VERTICAL, command=self.results_tree.yview)
@@ -206,10 +195,9 @@ class SchemaCompareApp:
         # Pack results view
         self.results_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         results_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Right panel - Object definitions - Now side by side
+          # Bottom panel - Object definitions - Side by side
         definitions_frame = ttk.Frame(self.paned_window)
-        self.paned_window.add(definitions_frame, weight=2)
+        self.paned_window.add(definitions_frame, weight=1)
         
         # Make definitions frame expand horizontally
         definitions_frame.columnconfigure(0, weight=1)
@@ -246,19 +234,26 @@ class SchemaCompareApp:
         
         target_frame.grid_columnconfigure(0, weight=1)
         target_frame.grid_rowconfigure(0, weight=1)
-        
-        # Configure text tags for highlighting differences
-        self.source_text.tag_configure('diff', background='#FFE3E3')  # Light red
-        self.target_text.tag_configure('diff', background='#E3FFE3')  # Light green
-        
-        # Synchronize scrolling between source and target
-        def on_source_scroll(*args):
+          # Configure text tags for highlighting differences (usando cores do Visual Studio)
+        self.source_text.tag_configure('diff', background='#FDD8D6')  # VS Studio vermelho claro para remoções
+        self.target_text.tag_configure('diff', background='#DDF7DD')  # VS Studio verde claro para adições
+          # Synchronize scrolling between source and target
+        def on_source_vertical_scroll(*args):
             self.target_text.yview_moveto(args[0])
-        def on_target_scroll(*args):
+        def on_target_vertical_scroll(*args):
             self.source_text.yview_moveto(args[0])
+        def on_source_horizontal_scroll(*args):
+            self.target_text.xview_moveto(args[0])
+        def on_target_horizontal_scroll(*args):
+            self.source_text.xview_moveto(args[0])
             
-        self.source_text.configure(yscrollcommand=lambda *args: (source_vsb.set(*args), on_source_scroll(args[0])))
-        self.target_text.configure(yscrollcommand=lambda *args: (target_vsb.set(*args), on_target_scroll(args[0])))
+        # Configure vertical scrolling sync
+        self.source_text.configure(yscrollcommand=lambda *args: (source_vsb.set(*args), on_source_vertical_scroll(args[0])))
+        self.target_text.configure(yscrollcommand=lambda *args: (target_vsb.set(*args), on_target_vertical_scroll(args[0])))
+        
+        # Configure horizontal scrolling sync
+        self.source_text.configure(xscrollcommand=lambda *args: (source_hsb.set(*args), on_source_horizontal_scroll(args[0])))
+        self.target_text.configure(xscrollcommand=lambda *args: (target_hsb.set(*args), on_target_horizontal_scroll(args[0])))
         
         # Status and progress bar frame
         self.status_frame = ttk.Frame(main_container)
@@ -291,7 +286,6 @@ class SchemaCompareApp:
         self.status_bar.config(text=message)
         self.show_progress(show_progress)
         self.root.update_idletasks()
-        
     def show_filter_dialog(self):
         """Show the filter dialog and update filters"""
         dialog = FilterDialog(self.root, self.filtered_objects)
@@ -300,11 +294,11 @@ class SchemaCompareApp:
         if dialog.result is not None:
             self.filtered_objects = dialog.result
             self.compare_schemas()  # Refresh the comparison with new filters
-    
-    def highlight_differences(self, source_text, target_text):
+
+    def highlight_differences(self, source_content, target_content):
         """Highlight differences between source and target text"""
-        source_lines = source_text.splitlines()
-        target_lines = target_text.splitlines()
+        source_lines = source_content.splitlines()
+        target_lines = target_content.splitlines()
         
         # Clear existing text and tags
         self.source_text.delete('1.0', tk.END)
@@ -322,23 +316,91 @@ class SchemaCompareApp:
             if source_line != target_line:
                 self.target_text.insert(tk.END, target_line + '\n', 'diff')
             else:
-                self.target_text.insert(tk.END, target_line + '\n')
+                self.target_text.insert(tk.END, target_line + '\n')    
+    def _format_column_details_dacfx(self, column: Dict) -> str:
+        """Format column details in DACFx style with fixed width columns"""
+        # Column name (25 chars)
+        name = column['column_name'].ljust(25)
+        
+        # Data type (35 chars)
+        data_type = column['data_type']
+        if data_type in ['decimal', 'numeric']:
+            data_type += f"({column['precision']},{column['scale']})"
+        elif data_type in ['varchar', 'nvarchar', 'char', 'nchar']:
+            length = 'max' if column['max_length'] == -1 else str(column['max_length'])
+            data_type += f"({length})"
+        data_type = data_type.ljust(35)
+        
+        # Nullable (10 chars)
+        nullable = "YES" if column['is_nullable'] else "NO"
+        nullable = nullable.ljust(10)
+        
+        # Identity (10 chars)
+        identity = ""
+        if column.get('is_identity'):
+            seed = column.get('identity_seed', 1)
+            incr = column.get('identity_increment', 1)
+            identity = f"({seed},{incr})"
+        identity = identity.ljust(10)
+        
+        # Default (10 chars)
+        default = "YES" if column.get('default_definition') else ""
+        default = default.ljust(10)
+        
+        # Computed (10 chars)
+        computed = "YES" if column.get('is_computed') else ""
+        computed = computed.ljust(10)
+        
+        return f"{name}{data_type}{nullable}{identity}{default}{computed}"
+
+    def _format_proc_header(self, obj: Dict) -> List[str]:
+        """Format stored procedure header in DACFx style"""
+        return [
+            "-- Object Properties --",
+            f"Schema:             {obj['schema_name']}",
+            f"Type:               {obj['object_type']}",
+            f"ANSI NULLS:        {'ON' if obj['is_ansi_nulls_on'] else 'OFF'}",
+            f"Quoted Identifier: {'ON' if obj['is_quoted_identifier_on'] else 'OFF'}",
+            f"Create Date:       {obj['create_date']}",
+            f"Last Modified:     {obj['modify_date']}",
+            "-" * 80
+        ]
 
     def display_column_differences(self, source_cols: List[Dict], target_cols: List[Dict]) -> None:
         """Display column differences between source and target tables with highlighting"""
-        source_text = "Source Table Columns:\n" + "-" * 50 + "\n"
-        target_text = "Target Table Columns:\n" + "-" * 50 + "\n"
+        # Headers
+        source_header = [
+            "-- Source Table Structure --",
+            "-" * 80,
+            "Column Name                 Data Type                           Nullable   Identity   Default   Computed",
+            "--------------------------------------------------------------------------------------",
+            ""
+        ]
         
-        source_lines = []
-        target_lines = []
+        target_header = [
+            "-- Target Table Structure --",
+            "-" * 80,
+            "Column Name                 Data Type                           Nullable   Identity   Default   Computed",
+            "--------------------------------------------------------------------------------------",
+            ""
+        ]
+        
+        # Clear existing text
+        self.source_text.delete('1.0', tk.END)
+        self.target_text.delete('1.0', tk.END)
+        
+        # Add headers
+        self.source_text.insert(tk.END, "\n".join(source_header))
+        self.target_text.insert(tk.END, "\n".join(target_header))
         
         # Prepare all column details
         all_columns = set()
-        if source_cols:
-            all_columns.update(col['column_name'] for col in source_cols)
-        if target_cols:
-            all_columns.update(col['column_name'] for col in target_cols)
-            
+        source_cols = source_cols or []
+        target_cols = target_cols or []
+        
+        all_columns.update(col['column_name'] for col in source_cols)
+        all_columns.update(col['column_name'] for col in target_cols)
+        
         source_dict = {col['column_name']: col for col in source_cols}
         target_dict = {col['column_name']: col for col in target_cols}
         
@@ -347,18 +409,24 @@ class SchemaCompareApp:
             source_col = source_dict.get(col_name)
             target_col = target_dict.get(col_name)
             
-            if source_col:
-                source_lines.append(self.format_column_details(source_col))
-            else:
-                source_lines.append(f"-- Column {col_name} does not exist --")
+            if source_col and target_col:
+                source_details = self._format_column_details_dacfx(source_col)
+                target_details = self._format_column_details_dacfx(target_col)
                 
-            if target_col:
-                target_lines.append(self.format_column_details(target_col))
+                # Compare each property
+                if self._columns_are_different(source_col, target_col):
+                    self.source_text.insert(tk.END, source_details + '\n', 'diff')
+                    self.target_text.insert(tk.END, target_details + '\n', 'diff')
+                else:
+                    self.source_text.insert(tk.END, source_details + '\n')
+                    self.target_text.insert(tk.END, target_details + '\n')
             else:
-                target_lines.append(f"-- Column {col_name} does not exist --")
-                
-        # Join lines and highlight differences
-        self.highlight_differences('\n'.join(source_lines), '\n'.join(target_lines))
+                if source_col:
+                    self.source_text.insert(tk.END, self._format_column_details_dacfx(source_col) + '\n', 'diff')
+                    self.target_text.insert(tk.END, f"-- Column {col_name} does not exist in target --\n", 'diff')
+                else:
+                    self.source_text.insert(tk.END, f"-- Column {col_name} does not exist in source --\n", 'diff')
+                    self.target_text.insert(tk.END, self._format_column_details_dacfx(target_col) + '\n', 'diff')
 
     def on_item_selected(self, event):
         """Handle tree item selection with improved difference highlighting"""
@@ -408,254 +476,245 @@ class SchemaCompareApp:
                 if target_obj:
                     target_cols = self.schema_comparer.get_table_columns(target_conn, target_obj['object_id'])
                 self.display_column_differences(source_cols, target_cols)
-                
             else:
-                # For stored procedures, show definitions with highlighting
+                # Obter definições e propriedades do objeto
+                source_props = []
+                target_props = []
                 source_def = ""
-                if source_obj:
-                    source_def = self.schema_comparer.get_object_definition(source_conn, source_obj['object_id'])
-                
                 target_def = ""
+
+                # Propriedades do objeto fonte
+                if source_obj:
+                    # Propriedades básicas
+                    source_props.extend([
+                        f"-- Object Properties --",
+                        f"Schema: {source_obj['schema_name']}",
+                        f"Create Date: {source_obj['create_date']}",
+                        f"Last Modified: {source_obj['modify_date']}",
+                        f"ANSI NULLS: {'ON' if source_obj['is_ansi_nulls_on'] else 'OFF'}",
+                        f"Quoted Identifier: {'ON' if source_obj['is_quoted_identifier_on'] else 'OFF'}",
+                        ""
+                    ])
+
+                    # Para stored procedures e funções, obter parâmetros e dependências
+                    if object_type in ["Stored Procedure", "Function"]:
+                        params = self.schema_comparer.execute_query(source_conn, """
+                            SELECT 
+                                p.name, t.name as data_type, p.max_length,
+                                p.precision, p.scale, p.is_output,
+                                p.has_default_value, p.default_value,
+                                p.parameter_id
+                            FROM sys.parameters p
+                            JOIN sys.types t ON p.user_type_id = t.user_type_id
+                            WHERE object_id = ?
+                            ORDER BY parameter_id
+                        """, (source_obj['object_id'],))
+
+                        if params:
+                            source_props.extend([
+                                "-- Parameters --",
+                                *[self._format_parameter(p) for p in params],
+                                ""
+                            ])
+
+                        # Checar uso de XML, CLR, etc
+                        props = self.schema_comparer.execute_query(source_conn, """
+                            SELECT 
+                                OBJECTPROPERTY(?, 'ExecIsXMLDocument') as is_xml,
+                                OBJECTPROPERTY(?, 'IsSchemaBound') as is_schema_bound,
+                                OBJECTPROPERTY(?, 'IsEncrypted') as is_encrypted,
+                                OBJECTPROPERTY(?, 'ExecIsStartup') as is_startup,
+                                OBJECTPROPERTY(?, 'ExecIsRecompiled') as is_recompiled,
+                                OBJECT_DEFINITION(?) as definition
+                            """, (source_obj['object_id'],) * 6)
+
+                        if props and props[0]:
+                            features = []
+                            prop = props[0]
+                            if prop['is_xml']: features.append('Returns XML')
+                            if prop['is_schema_bound']: features.append('Schema Bound')
+                            if prop['is_encrypted']: features.append('Encrypted')
+                            if prop['is_startup']: features.append('Startup')
+                            if prop['is_recompiled']: features.append('Recompile')
+                            
+                            if features:
+                                source_props.extend([
+                                    "-- Features --",
+                                    *features,
+                                    ""
+                                ])
+
+                    # Obter a definição do objeto
+                    definition = self.schema_comparer.get_object_definition(source_conn, source_obj['object_id'])
+                    source_def = definition if definition else "-- No definition available --"
+
+                # Propriedades do objeto alvo
                 if target_obj:
-                    target_def = self.schema_comparer.get_object_definition(target_conn, target_obj['object_id'])
-                
-                # Update text widgets with highlighting
+                    # Propriedades básicas
+                    target_props.extend([
+                        f"-- Object Properties --",
+                        f"Schema: {target_obj['schema_name']}",
+                        f"Create Date: {target_obj['create_date']}",
+                        f"Last Modified: {target_obj['modify_date']}",
+                        f"ANSI NULLS: {'ON' if target_obj['is_ansi_nulls_on'] else 'OFF'}",
+                        f"Quoted Identifier: {'ON' if target_obj['is_quoted_identifier_on'] else 'OFF'}",
+                        ""
+                    ])
+
+                    # Para stored procedures e funções, obter parâmetros e dependências
+                    if object_type in ["Stored Procedure", "Function"]:
+                        params = self.schema_comparer.execute_query(target_conn, """
+                            SELECT 
+                                p.name, t.name as data_type, p.max_length,
+                                p.precision, p.scale, p.is_output,
+                                p.has_default_value, p.default_value,
+                                p.parameter_id
+                            FROM sys.parameters p
+                            JOIN sys.types t ON p.user_type_id = t.user_type_id
+                            WHERE object_id = ?
+                            ORDER BY parameter_id
+                        """, (target_obj['object_id'],))
+
+                        if params:
+                            target_props.extend([
+                                "-- Parameters --",
+                                *[self._format_parameter(p) for p in params],
+                                ""
+                            ])
+
+                        # Checar uso de XML, CLR, etc
+                        props = self.schema_comparer.execute_query(target_conn, """
+                            SELECT 
+                                OBJECTPROPERTY(?, 'ExecIsXMLDocument') as is_xml,
+                                OBJECTPROPERTY(?, 'IsSchemaBound') as is_schema_bound,
+                                OBJECTPROPERTY(?, 'IsEncrypted') as is_encrypted,
+                                OBJECTPROPERTY(?, 'ExecIsStartup') as is_startup,
+                                OBJECTPROPERTY(?, 'ExecIsRecompiled') as is_recompiled,
+                                OBJECT_DEFINITION(?) as definition
+                            """, (target_obj['object_id'],) * 6)
+
+                        if props and props[0]:
+                            features = []
+                            prop = props[0]
+                            if prop['is_xml']: features.append('Returns XML')
+                            if prop['is_schema_bound']: features.append('Schema Bound')
+                            if prop['is_encrypted']: features.append('Encrypted')
+                            if prop['is_startup']: features.append('Startup')
+                            if prop['is_recompiled']: features.append('Recompile')
+                            
+                            if features:
+                                target_props.extend([
+                                    "-- Features --",
+                                    *features,
+                                    ""
+                                ])
+
+                    # Obter a definição do objeto
+                    definition = self.schema_comparer.get_object_definition(target_conn, target_obj['object_id'])
+                    target_def = definition if definition else "-- No definition available --"
+
+                # Juntar propriedades e definição
+                full_source = "\n".join(source_props) + "\n-- Definition --\n" + source_def
+                full_target = "\n".join(target_props) + "\n-- Definition --\n" + target_def
+
+                # Atualizar widgets com highlighting
                 self.highlight_differences(
-                    source_def if source_def else "-- Object does not exist in source --",
-                    target_def if target_def else "-- Object does not exist in target --"
+                    full_source if source_obj else "-- Object does not exist in source --",
+                    full_target if target_obj else "-- Object does not exist in target --"
                 )
-            
+
             source_conn.close()
             target_conn.close()
-            
             self.status_bar.config(text="Ready")
             
         except Exception as e:
             self.status_bar.config(text=f"Error: {str(e)}")
             messagebox.showerror("Error", f"Failed to load object details: {str(e)}")
-    
-    def show_connection_dialog(self, connection_type):
-        dialog = ConnectionDialog(self.root)
-        self.root.wait_window(dialog)
+
+    def _format_parameter(self, param):
+        """Format a parameter for display in DACFx style"""
+        p_type = param['data_type']
         
-        if dialog.selected_connection:
-            conn_info = f"{dialog.selected_connection['server']}\\{dialog.selected_connection['database']}"
-            if connection_type == "source":
-                self.source_connection = dialog.selected_connection
-                self.source_entry.configure(state='normal')
-                self.source_entry.delete(0, tk.END)
-                self.source_entry.insert(0, conn_info)
-                self.source_entry.configure(state='readonly')
-            else:
-                self.target_connection = dialog.selected_connection
-                self.target_entry.configure(state='normal')
-                self.target_entry.delete(0, tk.END)
-                self.target_entry.insert(0, conn_info)
-                self.target_entry.configure(state='readonly')
-                
-    def compare_schemas(self):
-        if not self.source_connection or not self.target_connection:
-            messagebox.showwarning("Warning", "Please select both source and target connections first.")
-            return
+        # Add length/precision/scale for appropriate types
+        if p_type in ['varchar', 'nvarchar', 'char', 'nchar']:
+            p_type += f"({param['max_length']})" if param['max_length'] != -1 else "(max)"
+        elif p_type in ['decimal', 'numeric']:
+            p_type += f"({param['precision']},{param['scale']})"
             
-        try:
-            self.update_status("Connecting to databases...", True)
-            
-            # Clear existing items in the tree
-            for item in self.results_tree.get_children():
-                self.results_tree.delete(item)
-                
-            # Connect to databases
-            try:
-                source_conn = self.schema_comparer.connect(
-                    self.source_connection["server"],
-                    self.source_connection["database"],
-                    self.source_connection["authentication"],
-                    self.source_connection.get("username"),
-                    self.source_connection.get("password")
-                )
-            except pyodbc.Error as e:
-                raise ConnectionError(f"Failed to connect to source database: {str(e)}")
-            
-            try:
-                target_conn = self.schema_comparer.connect(
-                    self.target_connection["server"],
-                    self.target_connection["database"],
-                    self.target_connection["authentication"],
-                    self.target_connection.get("username"),
-                    self.target_connection.get("password")
-                )
-            except pyodbc.Error as e:
-                source_conn.close()
-                raise ConnectionError(f"Failed to connect to target database: {str(e)}")
-            
-            # Compare schemas
-            self.update_status("Comparing schemas...", True)
-            differences = self.schema_comparer.compare_schemas(source_conn, target_conn)
-            
-            # Display results
-            self.update_status("Processing results...", True)
-            for diff in differences:
-                if not self.filtered_objects or diff["object"] in self.filtered_objects:
-                    tags = []
-                    difference_text = ""
-                    
-                    if diff["action"] == "Different":
-                        tags = ["different"]
-                        if diff["type"] == "Table":
-                            source_cols = len(diff["source_details"])
-                            target_cols = len(diff["target_details"])
-                            difference_text = f"Columns: {target_cols} vs {source_cols} (target vs source)"
-                        else:
-                            difference_text = "Definitions are different"
-                    elif diff["action"] == "Create":
-                        tags = ["source_only"]
-                        difference_text = "Exists only in source"
-                    elif diff["action"] == "Drop":
-                        tags = ["target_only"]
-                        difference_text = "Exists only in target"
-                        
-                    self.results_tree.insert("", tk.END,
-                        values=(
-                            diff["object"],
-                            diff["type"],
-                            diff["action"],
-                            difference_text
-                        ),
-                        tags=tags
-                    )
-            
-            if not differences:
-                self.update_status("No differences found between the schemas.")
-                messagebox.showinfo("Comparison Complete", "No differences found between the schemas.")
-            else:
-                self.update_status(f"Found {len(differences)} differences")
-            
-            # Close connections
-            source_conn.close()
-            target_conn.close()
-            
-        except ConnectionError as e:
-            self.update_status(f"Connection Error: {str(e)}")
-            messagebox.showerror("Connection Error", str(e))
-        except Exception as e:
-            self.update_status(f"Error: {str(e)}")
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
-        finally:
-            self.show_progress(False)
-            
-    def update_schema(self):
-        if not self.source_connection or not self.target_connection:
-            messagebox.showwarning("Warning", "Please select both source and target connections first.")
-            return
-            
-        # Get selected items
-        selected_items = self.results_tree.selection()
-        if not selected_items:
-            messagebox.showwarning("Warning", "Please select the changes you want to apply.")
-            return
-            
-        if not messagebox.askyesno("Confirm Update", 
-            "Are you sure you want to apply the selected changes to the target database?"):
-            return
-            
-        try:
-            self.status_bar.config(text="Applying changes...")
-            
-            # Connect to databases
-            source_conn = self.schema_comparer.connect(
-                self.source_connection["server"],
-                self.source_connection["database"],
-                self.source_connection["authentication"],
-                self.source_connection["username"],
-                self.source_connection["password"]
-            )
-            
-            target_conn = self.schema_comparer.connect(
-                self.target_connection["server"],
-                self.target_connection["database"],
-                self.target_connection["authentication"],
-                self.target_connection["username"],
-                self.target_connection["password"]
-            )
-            
-            cursor = target_conn.cursor()
-            
-            # Apply selected changes
-            for item_id in selected_items:
-                item = self.results_tree.item(item_id)
-                full_name = item["values"][0]
-                action = item["values"][2]
-                
-                try:
-                    schema_name, object_name = full_name.split(".")
-                    if action in ("Create", "Alter"):
-                        definition = self.schema_comparer.get_object_definition(
-                            source_conn,
-                            next(obj["object_id"] for obj in self.schema_comparer.get_schema_objects(source_conn)
-                                if f"{obj['schema_name']}.{obj['object_name']}" == full_name)
-                        )
-                        cursor.execute(definition)
-                    elif action == "Drop":
-                        cursor.execute(f"DROP OBJECT {full_name}")
-                        
-                except Exception as e:
-                    messagebox.showerror("Error", 
-                        f"Failed to {action.lower()} {full_name}: {str(e)}")
-                    target_conn.rollback()
-                    self.status_bar.config(text=f"Error applying changes: {str(e)}")
-                    return
-                    
-            target_conn.commit()
-            messagebox.showinfo("Success", "Selected changes have been applied successfully.")
-            self.status_bar.config(text="Changes applied successfully")
-            
-            # Refresh the comparison
-            self.compare_schemas()
-            
-            # Close connections
-            source_conn.close()
-            target_conn.close()
-            
-        except Exception as e:
-            self.status_bar.config(text=f"Error: {str(e)}")
-            messagebox.showerror("Error", f"An error occurred: {str(e)}")
-            
-    def format_column_details(self, column: Dict) -> str:
-        """Format column details for display."""
-        nullable = "NULL" if column["is_nullable"] else "NOT NULL"
-        data_type = column["data_type"]
+        parts = [
+            "@" + param['name'].ljust(20),
+            p_type.ljust(15),
+            'OUTPUT' if param['is_output'] else '',
+            f"= {param['default_value']}" if param['has_default_value'] else ''
+        ]
         
-        # Add length/precision/scale for applicable types
-        if column["max_length"] > 0:
-            if data_type in ["nvarchar", "varchar", "char", "nchar"]:
-                size = column["max_length"]
-                if data_type.startswith("n"):  # Unicode types
-                    size = size // 2
-                data_type = f"{data_type}({size})"
-        elif column["precision"] > 0:
-            if column["scale"] > 0:
-                data_type = f"{data_type}({column['precision']},{column['scale']})"
-            else:
-                data_type = f"{data_type}({column['precision']})"
-                
-        return f"{column['column_name']} {data_type} {nullable}"
+        return ' '.join(p for p in parts if p)
+
+    def _format_definition_with_go(self, text: str) -> str:
+        """Format object definition with GO statements in DACFx style"""
+        result = []
+        current_batch = []
         
-    def display_column_differences(self, source_cols: List[Dict], target_cols: List[Dict]) -> None:
-        """Display column differences between source and target tables."""
-        source_text = "Source Table Columns:\n"
-        source_text += "-" * 50 + "\n"
-        for col in source_cols:
-            source_text += self.format_column_details(col) + "\n"
+        for line in text.splitlines():
+            if line.strip().upper() == 'GO':
+                if current_batch:
+                    result.append('\n'.join(current_batch))
+                    result.append('GO')
+                    current_batch = []
+            else:
+                current_batch.append(line)
+                
+        if current_batch:
+            result.append('\n'.join(current_batch))
+            result.append('GO')
             
-        target_text = "Target Table Columns:\n"
-        target_text += "-" * 50 + "\n"
-        for col in target_cols:
-            target_text += self.format_column_details(col) + "\n"
+        return '\n'.join(result)
+
+    def _compare_proc_properties(self, source: Dict, target: Dict) -> List[str]:
+        """Compare stored procedure properties following DACFx rules"""
+        differences = []
+        
+        if source['is_ansi_nulls_on'] != target['is_ansi_nulls_on']:
+            differences.append('ANSI_NULLS setting')
+        if source['is_quoted_identifier_on'] != target['is_quoted_identifier_on']:
+            differences.append('QUOTED_IDENTIFIER setting')
             
-        # Show in text widgets
+        # Compare additional properties
+        source_props = source.get('additional_properties', {})
+        target_props = target.get('additional_properties', {})
+        
+        for prop in ['ExecIsXMLDocument', 'IsSchemaBound', 'IsEncrypted', 
+                    'ExecIsStartup', 'ExecIsRecompiled']:
+            if source_props.get(prop) != target_props.get(prop):
+                differences.append(prop.replace('ExecIs', '').replace('Is', ''))
+                
+        return differences
+
+    def highlight_differences(self, source_content: str, target_content: str):
+        """Highlight differences between source and target text in DACFx style"""
+        source_lines = source_content.splitlines()
+        target_lines = target_content.splitlines()
+        
+        # Clear existing text and tags
         self.source_text.delete('1.0', tk.END)
-        self.source_text.insert(tk.END, source_text)
-        
         self.target_text.delete('1.0', tk.END)
-        self.target_text.insert(tk.END, target_text)
+        
+        # Compare line by line with improved formatting
+        for source_line, target_line in zip_longest(source_lines, target_lines, fillvalue=""):
+            # Preserve indentation
+            source_indent = len(source_line) - len(source_line.lstrip())
+            target_indent = len(target_line) - len(target_line.lstrip())
+            
+            # Add source line with appropriate tag
+            if source_line != target_line:
+                self.source_text.insert(tk.END, " " * source_indent)
+                self.source_text.insert(tk.END, source_line.lstrip() + '\n', 'diff')
+            else:
+                self.source_text.insert(tk.END, source_line + '\n')
+            
+            # Add target line with appropriate tag
+            if source_line != target_line:
+                self.target_text.insert(tk.END, " " * target_indent)
+                self.target_text.insert(tk.END, target_line.lstrip() + '\n', 'diff')
+            else:
+                self.target_text.insert(tk.END, target_line + '\n')
