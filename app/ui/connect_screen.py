@@ -49,7 +49,7 @@ class ConnectScreen:
         dropdown_authentication = ttk.Combobox(frame_authentication, width=27, state="readonly")
         dropdown_authentication.place(x=120, y=0)
         dropdown_authentication['values'] = ("Windows Authentication", "SQL Authentication")
-        dropdown_authentication.current(0)  # Define como padrão "Windows Authentication"
+        dropdown_authentication.current(1)  # Define como padrão "Windows Authentication"
 
         def update_authentication(event):
             if dropdown_authentication.get() == "Windows Authentication":
