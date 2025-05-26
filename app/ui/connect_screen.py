@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import os
+from utils import database_connection
 
 class ConnectScreen:
     def __init__(self, master):
@@ -36,8 +37,8 @@ class ConnectScreen:
         frame_server_name.place(x=0, y=21)
         label_server_name = tk.Label(frame_server_name, text="Server name:", font=("Inter", 10), bg="#F0F0F0", fg="#000000")
         label_server_name.place(x=10, y=0)
-        entry_server_name = tk.Entry(frame_server_name, width=30, bg="#FFFEFE")
-        entry_server_name.place(x=120, y=0)
+        self.entry_server_name = tk.Entry(frame_server_name, width=30, bg="#FFFEFE")
+        self.entry_server_name.place(x=120, y=0)
 
         # Authentication
         frame_authentication = tk.Frame(frame_entry_menu, width=390, height=21, bg="#F0F0F0")
@@ -46,40 +47,40 @@ class ConnectScreen:
         label_authentication.place(x=10, y=0)
 
         # Substitui o entry_authentication por um dropdown
-        dropdown_authentication = ttk.Combobox(frame_authentication, width=27, state="readonly")
-        dropdown_authentication.place(x=120, y=0)
-        dropdown_authentication['values'] = ("Windows Authentication", "SQL Authentication")
-        dropdown_authentication.current(1)  # Define como padrão "Windows Authentication"
+        self.dropdown_authentication = ttk.Combobox(frame_authentication, width=27, state="readonly")
+        self.dropdown_authentication.place(x=120, y=0)
+        self.dropdown_authentication['values'] = ("Windows Authentication", "SQL Authentication")
+        self.dropdown_authentication.current(1)  # Define como padrão "Windows Authentication"
 
         def update_authentication(event):
-            if dropdown_authentication.get() == "Windows Authentication":
-                entry_user_name.config(state="normal")
-                entry_user_name.delete(0, "end")
-                entry_user_name.insert(0, os.getlogin())  # Insere o usuário do Windows
-                entry_user_name.config(state="disabled")
-                entry_password.config(state="disabled")
+            if self.dropdown_authentication.get() == "Windows Authentication":
+                self.entry_user_name.config(state="normal")
+                self.entry_user_name.delete(0, "end")
+                self.entry_user_name.insert(0, os.getlogin())  # Insere o usuário do Windows
+                self.entry_user_name.config(state="disabled")
+                self.entry_password.config(state="disabled")
             else:
-                entry_user_name.config(state="normal")
-                entry_user_name.delete(0, "end")
-                entry_password.config(state="normal")
+                self.entry_user_name.config(state="normal")
+                self.entry_user_name.delete(0, "end")
+                self.entry_password.config(state="normal")
 
-        dropdown_authentication.bind("<<ComboboxSelected>>", update_authentication)
+        self.dropdown_authentication.bind("<<ComboboxSelected>>", update_authentication)
 
         # User name
         frame_user_name = tk.Frame(frame_entry_menu, width=390, height=21, bg="#F0F0F0")
         frame_user_name.place(x=0, y=84)
         label_user_name = tk.Label(frame_user_name, text="User name:", font=("Inter", 10), bg="#F0F0F0", fg="#000000")
         label_user_name.place(x=10, y=0)
-        entry_user_name = tk.Entry(frame_user_name, width=30, bg="#FFFEFE")
-        entry_user_name.place(x=120, y=0)
+        self.entry_user_name = tk.Entry(frame_user_name, width=30, bg="#FFFEFE")
+        self.entry_user_name.place(x=120, y=0)
 
         # Password
         frame_password = tk.Frame(frame_entry_menu, width=390, height=21, bg="#F0F0F0")
         frame_password.place(x=0, y=116)
         label_password = tk.Label(frame_password, text="Password:", font=("Inter", 10), bg="#F0F0F0", fg="#000000")
         label_password.place(x=10, y=0)
-        entry_password = tk.Entry(frame_password, width=30, bg="#FFFEFE", show="*")
-        entry_password.place(x=120, y=0)
+        self.entry_password = tk.Entry(frame_password, width=30, bg="#FFFEFE", show="*")
+        self.entry_password.place(x=120, y=0)
 
         # Database Name
         frame_database_name = tk.Frame(frame_entry_menu, width=390, height=21, bg="#F0F0F0")
@@ -88,11 +89,10 @@ class ConnectScreen:
         label_database_name.place(x=10, y=0)
 
         # Cria um combobox para seleção de opções
-        dropdown_database_name = ttk.Combobox(frame_database_name, width=27, state="readonly")
-        dropdown_database_name.place(x=120, y=0)
+        self.dropdown_database_name = ttk.Combobox(frame_database_name, width=27)
+        self.dropdown_database_name.place(x=120, y=0)
 
-        # Exemplo de opções no dropdown
-        dropdown_database_name['values'] = ("Database1", "Database2", "Database3")
+        self.dropdown_database_name.bind("<Button-1>", self.get_databases)
 
         # Check Remember
         frame_check_remember = tk.Frame(frame_entry_menu, width=100, height=21, bg="#F0F0F0")
@@ -104,8 +104,38 @@ class ConnectScreen:
         btn_cancel = tk.Button(frame_entry_menu, text="Cancel", font=("Inter", 10), bg="#FFFFFF", fg="#000000", command=self.connect_window.destroy)
         btn_cancel.place(x=145, y=190, width=80, height=20)
 
-        btn_connect = tk.Button(frame_entry_menu, text="Connect", font=("Inter", 10), bg="#FFFFFF", fg="#000000")
-        btn_connect.place(x=265, y=190, width=80, height=20)
+        self.btn_connect = tk.Button(frame_entry_menu, text="Connect", font=("Inter", 10), bg="#FFFFFF", fg="#000000")
+        self.btn_connect.place(x=265, y=190, width=80, height=20)
+
+        # Função para obter os bancos de dados disponíveis
+    def get_databases(self, event):
+        self.dropdown_database_name['values'] = []
+        server_name = self.entry_server_name.get()
+        user_name = self.entry_user_name.get()
+        password = self.entry_password.get()
+        authentication = self.dropdown_authentication.get()
+
+        if not server_name:
+            return
+
+        if authentication == "Windows Authentication":
+            user_name = None
+            password = None
+        else:
+            if not user_name or not password:
+                return
+
+        try:
+            print('Connecting to database...')
+            self.db_conn = database_connection.DatabaseConnection(server_name, user_name, password, authentication=authentication)
+            self.db_conn.connect()
+            databases = self.db_conn.get_all_databases()
+            if databases:
+                self.dropdown_database_name['values'] = databases
+            else:
+                self.dropdown_database_name['values'] = ["No databases found"]
+        except Exception as e:
+            print(f"Error fetching databases: {e}")
 
 # Exemplo de como abrir a tela
 if __name__ == "__main__":
