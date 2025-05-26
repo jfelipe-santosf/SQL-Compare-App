@@ -1,2 +1,0 @@
-[console_scripts]
-sqlcompare = sql_compare.main:main
