@@ -163,6 +163,10 @@ class MainScreen:
         text_source_body.bind("<MouseWheel>", lambda event: update_line_numbers())
         text_target_body.bind("<MouseWheel>", lambda event: update_line_numbers())
 
+        # Bloqueia os widgets text_source_body e text_target_body para edição
+        text_source_body.config(state="disabled")
+        text_target_body.config(state="disabled")
+
         # Inicializa o contador de linhas
         update_line_numbers()
 

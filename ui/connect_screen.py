@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import os
 
 class ConnectScreen:
     def __init__(self, master):
@@ -27,8 +28,8 @@ class ConnectScreen:
         treeview.pack(fill="both", expand=True)
 
         # Menu de entrada
-        frame_entry_menu = tk.Frame(self.connect_window, width=390, height=216, bg="#F0F0F0")
-        frame_entry_menu.place(x=0, y=246)
+        frame_entry_menu = tk.Frame(self.connect_window, width=390, height=236, bg="#F0F0F0")
+        frame_entry_menu.place(x=0, y=264)
 
         # Server name
         frame_server_name = tk.Frame(frame_entry_menu, width=390, height=21, bg="#F0F0F0")
@@ -43,8 +44,26 @@ class ConnectScreen:
         frame_authentication.place(x=0, y=52)
         label_authentication = tk.Label(frame_authentication, text="Authentication:", font=("Inter", 10), bg="#F0F0F0", fg="#000000")
         label_authentication.place(x=10, y=0)
-        entry_authentication = tk.Entry(frame_authentication, width=30, bg="#FFFEFE")
-        entry_authentication.place(x=120, y=0)
+
+        # Substitui o entry_authentication por um dropdown
+        dropdown_authentication = ttk.Combobox(frame_authentication, width=27, state="readonly")
+        dropdown_authentication.place(x=120, y=0)
+        dropdown_authentication['values'] = ("Windows Authentication", "SQL Authentication")
+        dropdown_authentication.current(0)  # Define como padrão "Windows Authentication"
+
+        def update_authentication(event):
+            if dropdown_authentication.get() == "Windows Authentication":
+                entry_user_name.config(state="normal")
+                entry_user_name.delete(0, "end")
+                entry_user_name.insert(0, os.getlogin())  # Insere o usuário do Windows
+                entry_user_name.config(state="disabled")
+                entry_password.config(state="disabled")
+            else:
+                entry_user_name.config(state="normal")
+                entry_user_name.delete(0, "end")
+                entry_password.config(state="normal")
+
+        dropdown_authentication.bind("<<ComboboxSelected>>", update_authentication)
 
         # User name
         frame_user_name = tk.Frame(frame_entry_menu, width=390, height=21, bg="#F0F0F0")
