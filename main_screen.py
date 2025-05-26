@@ -1,6 +1,5 @@
 import tkinter as tk
 from tkinter import ttk  # Importa ttk para estilos adicionais
-import utils.screen_navigation as sn  # Corrige o import para ser absoluto
 
 class MainScreen:
     def __init__(self, master):
@@ -22,34 +21,15 @@ class MainScreen:
         btn_start_compare.pack(side="left", padx=5, pady=5)
 
         # Botão Filter
-        btn_filter = tk.Button(
-            frame_top,
-            text="Filter",
-            bg="#F0F0F0",
-            font=("Inter", 10),
-            fg="#000000",
-            command=lambda: sn.ScreenNavigation(self.root).navigate_to_filter_screen()
-        )
+        btn_filter = tk.Button(frame_top, text="Filter", bg="#F0F0F0", font=("Inter", 10), fg="#000000")
         btn_filter.pack(side="left", padx=5, pady=5)
 
         # Botão Select Source
-        btn_select_source = tk.Button(
-            frame_top, text="Select source",
-            bg="#F0F0F0",
-            font=("Inter", 10),
-            fg="#000000",
-            command=lambda: sn.ScreenNavigation(self.root).navigate_to_connect_screen(0)
-        )
+        btn_select_source = tk.Button(frame_top, text="Select source", bg="#F0F0F0", font=("Inter", 10), fg="#000000")
         btn_select_source.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
         # Botão Select Target
-        btn_select_target = tk.Button(
-            frame_top, text="Select target",
-            bg="#F0F0F0",
-            font=("Inter", 10),
-            fg="#000000",
-            command=lambda: sn.ScreenNavigation(self.root).navigate_to_connect_screen(1)
-        )
+        btn_select_target = tk.Button(frame_top, text="Select target", bg="#F0F0F0", font=("Inter", 10), fg="#000000")
         btn_select_target.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
         # Treeview para objetos diferentes

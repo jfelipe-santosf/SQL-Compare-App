@@ -9,7 +9,6 @@ class ConnectScreen:
         self.connect_window.resizable(False, False)
         self.connect_window.configure(bg="#FFFFFF")
         self.connect_window.title("Select connection")
-        self.connect_window.grab_set()  # Garante que a janela de conexão seja modal
 
         # Treeview para histórico de conexões
         frame_treeview = tk.Frame(self.connect_window, width=390, height=274)
