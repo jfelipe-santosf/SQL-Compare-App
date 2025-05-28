@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk  # Importa ttk para estilos adicionais
-import utils.screen_navigation as sn  # Corrige o import para ser absoluto
+import utils.screen_navigation_manager as sn  # Corrige o import para ser absoluto
 
 class MainScreen:
     def __init__(self, master):
@@ -28,7 +28,7 @@ class MainScreen:
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigation(self.root).navigate_to_filter_screen()
+            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_filter_screen()
         )
         btn_filter.pack(side="left", padx=5, pady=5)
 
@@ -38,7 +38,7 @@ class MainScreen:
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigation(self.root).navigate_to_connect_screen(0)
+            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(0)
         )
         btn_select_source.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
@@ -48,7 +48,7 @@ class MainScreen:
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigation(self.root).navigate_to_connect_screen(1)
+            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(1)
         )
         btn_select_target.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 

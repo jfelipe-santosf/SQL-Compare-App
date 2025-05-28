@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import os
-from utils import database_connection
+from utils import database_connection_manager
 
 class ConnectScreen:
     def __init__(self, master):
@@ -50,8 +50,7 @@ class ConnectScreen:
         self.dropdown_authentication = ttk.Combobox(frame_authentication, width=27, state="readonly")
         self.dropdown_authentication.place(x=120, y=0)
         self.dropdown_authentication['values'] = ("Windows Authentication", "SQL Authentication")
-        self.dropdown_authentication.current(1)  # Define como padrão "Windows Authentication"
-
+        self.dropdown_authentication.current(0)  # Define como padrão "Windows Authentication"
         def update_authentication(event):
             if self.dropdown_authentication.get() == "Windows Authentication":
                 self.entry_user_name.config(state="normal")
@@ -107,6 +106,8 @@ class ConnectScreen:
         self.btn_connect = tk.Button(frame_entry_menu, text="Connect", font=("Inter", 10), bg="#FFFFFF", fg="#000000")
         self.btn_connect.place(x=265, y=190, width=80, height=20)
 
+        update_authentication(None)  # Chama a função para configurar o estado inicial
+
         # Função para obter os bancos de dados disponíveis
     def get_databases(self, event):
         self.dropdown_database_name['values'] = []
@@ -127,7 +128,12 @@ class ConnectScreen:
 
         try:
             print('Connecting to database...')
-            self.db_conn = database_connection.DatabaseConnection(server_name, user_name, password, authentication=authentication)
+            self.db_conn = database_connection_manager.DatabaseConnectionManager(
+                server=server_name,
+                username=user_name,
+                password=password,
+                authentication=authentication
+            )
             self.db_conn.connect()
             databases = self.db_conn.get_all_databases()
             if databases:
@@ -135,6 +141,7 @@ class ConnectScreen:
             else:
                 self.dropdown_database_name['values'] = ["No databases found"]
         except Exception as e:
+            ttk.messagebox.showerror("Error", f"Failed to connect to the database: {e}")
             print(f"Error fetching databases: {e}")
 
 # Exemplo de como abrir a tela

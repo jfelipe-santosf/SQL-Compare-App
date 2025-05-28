@@ -1,6 +1,6 @@
 import tkinter as tk
 
-class ScreenNavigation:
+class ScreenNavigationManager:
     def __init__(self, root):
         self.root = root
         self.parameter = None

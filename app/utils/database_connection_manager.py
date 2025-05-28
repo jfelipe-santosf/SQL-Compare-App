@@ -1,6 +1,6 @@
 import pyodbc
 
-class DatabaseConnection:
+class DatabaseConnectionManager:
     def __init__(self, server, username=None, password=None, database=None, authentication="Windows Authentication"):
         self.server = server
         self.username = username
