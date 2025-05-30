@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 import os
-from utils import database_connection_manager, saved_connections_manager
+from test_utils import test_database_connection_manager, test_saved_connections_manager
 
 class ConnectScreen:
     def __init__(self, master):
@@ -128,7 +128,7 @@ class ConnectScreen:
 
         try:
             print('Connecting to database...')
-            self.db_conn = database_connection_manager.DatabaseConnectionManager(
+            self.db_conn = test_database_connection_manager.DatabaseConnectionManager(
                 server=server_name,
                 username=user_name,
                 password=password,
