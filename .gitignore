@@ -42,5 +42,6 @@ htmlcov/
 # Windows
 Thumbs.db
 
-# test files
+# folder specific ignores
 test/
+_internal/
