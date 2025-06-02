@@ -41,3 +41,6 @@ htmlcov/
 
 # Windows
 Thumbs.db
+
+# test files
+test/

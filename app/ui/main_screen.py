@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk  # Importa ttk para estilos adicionais
-import utils.screen_navigation_manager as sn  # Corrige o import para ser absoluto
+import app.utils.screen_navigation_manager as sn  # Corrige o import para ser absoluto
 
 class MainScreen:
     def __init__(self, master):

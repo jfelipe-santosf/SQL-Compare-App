@@ -14,7 +14,7 @@ class ScreenNavigationManager:
         self.parameter = parameter
 
         # Importa a classe ConnectScreen
-        from ui.connect_screen import ConnectScreen
+        from app.ui import ConnectScreen
 
         # Inicializa a tela de conexão diretamente
         ConnectScreen(self.root)
@@ -24,7 +24,7 @@ class ScreenNavigationManager:
         Navega para a tela de filtro (FilterScreen).
         """
         # Importa a classe FilterScreen
-        from ui.filter_screen import FilterScreen
+        from app.ui import FilterScreen
 
         # Inicializa a tela de filtro diretamente
         FilterScreen(self.root)
