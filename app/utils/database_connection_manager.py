@@ -21,7 +21,7 @@ class DatabaseConnectionManager:
                 )
             print("Connection successful")
         except pyodbc.Error as e:
-            print(f"Error connecting to database: {e}")
+            raise Exception(f"Error connecting to the database: {e}")
 
     def get_all_databases(self):
         print("Fetching all databases...")

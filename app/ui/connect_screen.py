@@ -173,14 +173,14 @@ class ConnectScreen:
 
             try:
                 print('Connecting to database...')
-                self.db_conn = database_connection_manager.DatabaseConnectionManager(
+                db_conn = database_connection_manager.DatabaseConnectionManager(
                     server=server_name,
                     username=user_name,
                     password=password,
                     authentication=authentication
                 )
                 self.db_conn.connect()
-                databases = self.db_conn.get_all_databases()
+                databases = db_conn.get_all_databases()
                 self.connect_window.after(0, lambda: self.dropdown_database_name.config(
                     values=databases if databases else ["No databases found"]
                 ))
