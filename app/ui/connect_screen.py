@@ -5,7 +5,8 @@ from app.utils import database_connection_manager, saved_connections_manager
 import threading
 
 class ConnectScreen:
-    def __init__(self, master):
+    def __init__(self, master, on_connect_callback=None):
+        self.on_connect_callback = on_connect_callback
         # Criação da janela toplevel
         self.connect_window = tk.Toplevel(master)
         self.connect_window.geometry("390x490")
@@ -97,7 +98,8 @@ class ConnectScreen:
         # Check Remember
         frame_check_remember = tk.Frame(frame_entry_menu, width=100, height=21, bg="#F0F0F0")
         frame_check_remember.place(x=10, y=190)
-        self.check_remember = tk.Checkbutton(frame_check_remember, text="Remember", font=("Inter", 10), bg="#F0F0F0", fg="#000000")
+        self.var_check_remember = tk.BooleanVar(value=False)  # Variável para o estado do checkbox
+        self.check_remember = tk.Checkbutton(frame_check_remember, text="Remember", font=("Inter", 10), bg="#F0F0F0", fg="#000000", variable=self.var_check_remember)
         self.check_remember.pack(anchor="w", padx=2)
 
         # Botões Cancel e Connect
@@ -105,7 +107,7 @@ class ConnectScreen:
         btn_cancel.place(x=190, y=190, width=80, height=20)
 
         self.btn_connect = tk.Button(frame_entry_menu, text="Connect", font=("Inter", 10), bg="#FFFFFF", fg="#000000",
-                                     command=self.connect)
+                                     command=self.on_connect_btn)
         self.btn_connect.place(x=275, y=190, width=80, height=20)
 
         self.btn_delete = tk.Button(
@@ -118,11 +120,6 @@ class ConnectScreen:
         
         update_authentication(None)
         self.get_saved_connections()
-    
-    def connect(self):
-        if self.check_remember.var.get():
-            # Salva a conexão se a opção "Remember" estiver marcada
-            self.save_connection()
 
     def delete_selected_connection(self):
         selected_item = self.treeview.focus()
@@ -189,7 +186,6 @@ class ConnectScreen:
 
         threading.Thread(target=run).start()
 
-
     def get_saved_connections(self):
         """
         Obtém todas as conexões salvas do gerenciador de conexões.
@@ -237,7 +233,25 @@ class ConnectScreen:
         except Exception as e:
             # Log de erro (opcional)
             messagebox.showerror("Error", f"Failed to load saved connections: {e}")
-            
+    
+    def on_connect_btn(self):
+        if not self._validate_fields():
+            return
+        if self.var_check_remember.get():
+            # Salva a conexão se a opção "Remember" estiver marcada
+            self.save_connection()
+
+        connection_data = {
+            "server_name": self.entry_server_name.get(),
+            "user_name": self.entry_user_name.get() if self.dropdown_authentication.get() == "SQL Authentication" else None,
+            "password": self.entry_password.get() if self.dropdown_authentication.get() == "SQL Authentication" else None,
+            "authentication": self.dropdown_authentication.get(),
+            "database_name": self.dropdown_database_name.get()
+        }
+        if self.on_connect_callback:
+            self.on_connect_callback(connection_data)
+        self.connect_window.destroy()
+
     def on_treeview_select(self, event):
         selected_item = self.treeview.focus()  # Obtém o item selecionado
         if not selected_item:
@@ -288,8 +302,25 @@ class ConnectScreen:
             authentication=authentication,
             database_name=database_name
         )
-        # Aqui você pode salvar a conexão em um arquivo ou banco de dados
-        print(f"Connection saved: {server_name}, {user_name}, {authentication}, {database_name}")
+
+    def _validate_fields(self):
+        """
+        Valida os campos de entrada para garantir que estão preenchidos corretamente.
+        
+        Returns:
+            bool: True se todos os campos estiverem válidos, False caso contrário.
+        """
+        if not self.entry_server_name.get():
+            messagebox.showwarning("Warning", "Server name is required.")
+            return False
+        if self.dropdown_authentication.get() == "SQL Authentication":
+            if not self.entry_user_name.get() or not self.entry_password.get():
+                messagebox.showwarning("Warning", "User name and password are required for SQL Authentication.")
+                return False
+        if not self.dropdown_database_name.get():
+            messagebox.showwarning("Warning", "Database name is required.")
+            return False
+        return True
 
 # Exemplo de como abrir a tela
 if __name__ == "__main__":

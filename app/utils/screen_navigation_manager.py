@@ -5,19 +5,15 @@ class ScreenNavigationManager:
         self.root = root
         self.parameter = None
 
-    def navigate_to_connect_screen(self, parameter):
+    def navigate_to_connect_screen(self, parameter, on_connect_callback=None):
         """
         Navega para a tela de conexão (ConnectScreen).
 
         :param parameter: 0 para source, 1 para target
         """
         self.parameter = parameter
-
-        # Importa a classe ConnectScreen
         from app.ui import ConnectScreen
-
-        # Inicializa a tela de conexão diretamente
-        ConnectScreen(self.root)
+        ConnectScreen(self.root, on_connect_callback)
 
     def navigate_to_filter_screen(self):
         """

@@ -22,35 +22,41 @@ class MainScreen:
         btn_start_compare.pack(side="left", padx=5, pady=5)
 
         # Botão Filter
-        btn_filter = tk.Button(
+        self.btn_filter = tk.Button(
             frame_top,
             text="Filter",
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_filter_screen()
+            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(
+                0, self.handle_source_connection
+            )
         )
-        btn_filter.pack(side="left", padx=5, pady=5)
+        self.btn_filter.pack(side="left", padx=5, pady=5)
 
         # Botão Select Source
-        btn_select_source = tk.Button(
+        self.btn_select_source = tk.Button(
             frame_top, text="Select source",
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(0)
+            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(
+                1, self.handle_target_connection
+            )
         )
-        btn_select_source.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        self.btn_select_source.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
         # Botão Select Target
-        btn_select_target = tk.Button(
+        self.btn_select_target = tk.Button(
             frame_top, text="Select target",
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(1)
+            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(
+                1, self.handle_target_connection
+            )
         )
-        btn_select_target.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        self.btn_select_target.pack(side="left", padx=5, pady=5, fill="x", expand=True)
 
         # Treeview para objetos diferentes
         frame_treeview = tk.Frame(self.root, bg="#FFFFFF")
@@ -169,6 +175,14 @@ class MainScreen:
 
         # Inicializa o contador de linhas
         update_line_numbers()
+
+    def handle_source_connection(self, connection_data):
+        print("Fonte conectada:", connection_data)
+        # Aqui você pode armazenar os dados para uso posterior
+
+    def handle_target_connection(self, connection_data):
+        print("Alvo conectado:", connection_data)
+        # Aqui você pode armazenar os dados para uso posterior
 
 # Exemplo de como abrir a tela
 if __name__ == "__main__":

@@ -19,7 +19,9 @@ class SavedConnectionsManager:
         # Descriptografa as senhas
         for conn in connections:
             try:
-                conn["password"] = self.encryption_manager.decrypt(conn["password"])
+                if conn.get("authentication") == "SQL Authentication":
+                    # Apenas descriptografa se a autenticação for SQL
+                    conn["password"] = self.encryption_manager.decrypt(conn["password"])
             except Exception as e:
                 conn["password"] = "<Erro ao descriptografar>"
 
@@ -35,7 +37,6 @@ class SavedConnectionsManager:
     def save_connection(self, server_name, user_name, password, authentication, database_name):
         encrypted_password = self.encryption_manager.encrypt(password)
         now = datetime.utcnow().isoformat()
-
         new_conn = {
             "server_name": server_name,
             "user_name": user_name,
