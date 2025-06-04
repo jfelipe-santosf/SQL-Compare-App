@@ -1,11 +1,9 @@
-import tkinter as tk
-
 class ScreenNavigationManager:
     def __init__(self, root):
         self.root = root
         self.parameter = None
 
-    def navigate_to_connect_screen(self, parameter, position: dict, on_connect_callback=None):
+    def navigate_to_connect_screen(self, position: dict, on_connect_callback=None):
         """
         Navega para a tela de conexão (ConnectScreen).
         
