@@ -8,6 +8,7 @@ class DatabaseConnectionManager:
         self.database = database
         self.authentication = authentication
         self.connection = None
+        print(f'connecting to {self.server}')
 
     def connect(self):
         try:

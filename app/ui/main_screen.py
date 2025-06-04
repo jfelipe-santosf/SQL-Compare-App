@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk  # Importa ttk para estilos adicionais
-import app.utils.screen_navigation_manager as sn  # Corrige o import para ser absoluto
+from app.utils import ScreenNavigationManager as snm, DatabaseConnectionManager as dcm
 
 class MainScreen:
     def __init__(self, master):
@@ -19,6 +19,7 @@ class MainScreen:
 
         # Botão Compare
         btn_start_compare = tk.Button(frame_top, text="Compare", bg="#F0F0F0", font=("Inter", 10), fg="#000000")
+        btn_start_compare.pack_propagate(False)  # Impede que o botão encolha
         btn_start_compare.pack(side="left", padx=5, pady=5)
 
         # Botão Filter
@@ -28,9 +29,7 @@ class MainScreen:
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(
-                0, self.handle_source_connection
-            )
+            command=lambda: snm(self.root).navigate_to_filter_screen({'x': self.btn_filter.winfo_rootx(), 'y': self.btn_filter.winfo_rooty()})
         )
         self.btn_filter.pack(side="left", padx=5, pady=5)
 
@@ -40,8 +39,9 @@ class MainScreen:
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(
-                1, self.handle_target_connection
+            command=lambda: snm(self.root).navigate_to_connect_screen(
+                1, {'x': self.btn_select_source.winfo_rootx(), 'y': self.btn_select_source.winfo_rooty()},
+                self.handle_source_connection
             )
         )
         self.btn_select_source.pack(side="left", padx=5, pady=5, fill="x", expand=True)
@@ -52,8 +52,9 @@ class MainScreen:
             bg="#F0F0F0",
             font=("Inter", 10),
             fg="#000000",
-            command=lambda: sn.ScreenNavigationManager(self.root).navigate_to_connect_screen(
-                1, self.handle_target_connection
+            command=lambda: snm(self.root).navigate_to_connect_screen(
+                1, {'x': self.btn_select_target.winfo_rootx(), 'y': self.btn_select_target.winfo_rooty()},
+                self.handle_target_connection
             )
         )
         self.btn_select_target.pack(side="left", padx=5, pady=5, fill="x", expand=True)
@@ -63,7 +64,7 @@ class MainScreen:
         frame_treeview.pack(fill="both", expand=True, padx=10, pady=5)
 
         columns = ("Object Name", "Object Type", "Action")
-        treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings")
+        treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings", selectmode="browse")
 
         # Configuração das colunas
         treeview.heading("Object Name", text="Object Name")
@@ -175,15 +176,48 @@ class MainScreen:
 
         # Inicializa o contador de linhas
         update_line_numbers()
-
+        
     def handle_source_connection(self, connection_data):
         print("Fonte conectada:", connection_data)
         # Aqui você pode armazenar os dados para uso posterior
+        
+        try:
+            self.source_connection = dcm(connection_data['server_name'],
+                                        connection_data['user_name'],
+                                        connection_data['password'],
+                                        connection_data['authentication'],
+                                        connection_data['database_name'])
 
+            self.btn_select_source.config(
+                text=f"{connection_data['server_name']}/{connection_data['database_name']}"
+            )
+        except:
+            self.btn_select_source.config(
+                text="Select source",
+                state="normal"
+            )
+            return
+        
     def handle_target_connection(self, connection_data):
         print("Alvo conectado:", connection_data)
         # Aqui você pode armazenar os dados para uso posterior
+        try:
+            self.target_connection = dcm(connection_data['server_name'],
+                                        connection_data['user_name'],
+                                        connection_data['password'],
+                                        connection_data['authentication'],
+                                        connection_data['database_name'])
 
+            self.btn_select_target.config(
+                text=f"{connection_data['server_name']}/{connection_data['database_name']}"
+            )
+        except:
+            self.btn_select_target.config(
+                text="Select target",
+                state="normal"
+            )
+            return
+        
 # Exemplo de como abrir a tela
 if __name__ == "__main__":
     root = tk.Tk()

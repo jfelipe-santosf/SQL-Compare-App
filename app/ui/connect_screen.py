@@ -1,26 +1,28 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-import os
-from app.utils import database_connection_manager, saved_connections_manager
-import threading
+import os, threading
+from app.utils import DatabaseConnectionManager as dcm, SavedConnectionsManager as scm
 
 class ConnectScreen:
-    def __init__(self, master, on_connect_callback=None):
+    def __init__(self, master, position: dict, on_connect_callback=None):
         self.on_connect_callback = on_connect_callback
+        self.was_cancelled = True
         # Criação da janela toplevel
         self.connect_window = tk.Toplevel(master)
-        self.connect_window.geometry("390x490")
+        self.connect_window.geometry(f"390x490+{position['x']}+{position['y']+20}")
         self.connect_window.resizable(False, False)
         self.connect_window.configure(bg="#FFFFFF")
         self.connect_window.title("Select connection")
         self.connect_window.grab_set()  # Garante que a janela de conexão seja modal
+        self.connect_window.transient(master)  # Define a janela como filha da janela principal
+        self.connect_window.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
         # Treeview para histórico de conexões
         frame_treeview = tk.Frame(self.connect_window, width=390, height=274)
         frame_treeview.place(x=0, y=0)
 
         columns = ("Server", "Database")
-        self.treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings", height=12)
+        self.treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings", height=12, selectmode="browse")
 
         self.treeview.heading("Server", text="Server")
         self.treeview.heading("Database", text="Database")
@@ -29,6 +31,19 @@ class ConnectScreen:
         self.treeview.column("Database", width=195, anchor="center")
 
         self.treeview.pack(fill="both", expand=True)
+
+        # cria menu de contexto
+        self.menu = tk.Menu(self.connect_window, tearoff=0)
+        self.menu.add_command(label="Refresh", command=self.get_saved_connections)
+        self.menu.add_separator()
+        self.menu.add_command(label="Connect", command=self.menu_connect)
+        self.menu.add_command(label="Delete", command=self.delete_selected_connection)
+        self.menu.add_separator()
+        self.menu.add_command(label="Clear historic connection", command= self.clear_historic_connections)
+        self.menu.add_command(label="Exit", command=self._on_window_close)
+        self.treeview.bind("<Button-3>", self.show_context_menu)
+
+        self.treeview.bind("<ButtonRelease-1>", self.on_treeview_select)
 
         # Menu de entrada
         frame_entry_menu = tk.Frame(self.connect_window, width=390, height=236, bg="#F0F0F0")
@@ -97,52 +112,52 @@ class ConnectScreen:
 
         # Check Remember
         frame_check_remember = tk.Frame(frame_entry_menu, width=100, height=21, bg="#F0F0F0")
-        frame_check_remember.place(x=10, y=190)
+        frame_check_remember.place(x=15, y=185)
         self.var_check_remember = tk.BooleanVar(value=False)  # Variável para o estado do checkbox
         self.check_remember = tk.Checkbutton(frame_check_remember, text="Remember", font=("Inter", 10), bg="#F0F0F0", fg="#000000", variable=self.var_check_remember)
         self.check_remember.pack(anchor="w", padx=2)
 
         # Botões Cancel e Connect
-        btn_cancel = tk.Button(frame_entry_menu, text="Cancel", font=("Inter", 10), bg="#FFFFFF", fg="#000000", command=self.connect_window.destroy)
-        btn_cancel.place(x=190, y=190, width=80, height=20)
+        btn_cancel = tk.Button(frame_entry_menu, text="Cancel", font=("Inter", 10), bg="#FFFFFF", fg="#000000", command=self._on_window_close)
+        btn_cancel.place(x=145, y=190, width=80, height=20)
 
         self.btn_connect = tk.Button(frame_entry_menu, text="Connect", font=("Inter", 10), bg="#FFFFFF", fg="#000000",
                                      command=self.on_connect_btn)
-        self.btn_connect.place(x=275, y=190, width=80, height=20)
-
-        self.btn_delete = tk.Button(
-            frame_entry_menu, text="Delete", font=("Inter", 10),
-            bg="#FFFFFF", fg="#000000", command=self.delete_selected_connection
-        )
-        self.btn_delete.place(x=105, y=190, width=80, height=20)
-
-        self.treeview.bind("<<TreeviewSelect>>", self.on_treeview_select)
+        self.btn_connect.place(x=265, y=190, width=80, height=20)
         
         update_authentication(None)
         self.get_saved_connections()
 
     def delete_selected_connection(self):
-        selected_item = self.treeview.focus()
-        if not selected_item:
+        selected_items = self.treeview.selection()
+        if not selected_items:
             messagebox.showwarning("Warning", "No connection selected to delete.")
             return
-
-        values = self.treeview.item(selected_item, 'values')
-        if not values:
+        
+        iid = selected_items[0]
+        conn_data = None
+        
+        # Encontra os dados da conexão selecionada
+        for conn in self.connections:
+            if conn.get("connection_id") == iid:
+                conn_data = conn
+                break
+        
+        if not conn_data:
             return
-
-        server, database = values
-
+        
         # Confirmação
-        confirm = messagebox.askyesno("Confirm Delete", f"Delete connection:\nServer: {server}\nDatabase: {database}?")
+        confirm = messagebox.askyesno(
+            "Confirm Delete", 
+            f"Delete connection:\nServer: {conn_data['server_name']}\nDatabase: {conn_data['database_name']}?"
+        )
         if not confirm:
             return
 
         try:
             # Remove da lista interna e do arquivo
-            scm = saved_connections_manager.SavedConnectionsManager()
-            scm.delete_connection(server_name=server, database_name=database)
-
+            scm().delete_connection(connection_id=iid)
+        
             # Atualiza o Treeview
             self.get_saved_connections()
             messagebox.showinfo("Success", "Connection deleted successfully.")
@@ -170,13 +185,13 @@ class ConnectScreen:
 
             try:
                 print('Connecting to database...')
-                db_conn = database_connection_manager.DatabaseConnectionManager(
+                db_conn = dcm(
                     server=server_name,
                     username=user_name,
                     password=password,
                     authentication=authentication
                 )
-                self.db_conn.connect()
+                db_conn.connect()
                 databases = db_conn.get_all_databases()
                 self.connect_window.after(0, lambda: self.dropdown_database_name.config(
                     values=databases if databases else ["No databases found"]
@@ -216,7 +231,7 @@ class ConnectScreen:
         """
         try:
             # Obtém todas as conexões do gerenciador
-            self.connections = saved_connections_manager.SavedConnectionsManager().get_all_connections()
+            self.connections = scm().get_all_connections()
 
             # Limpa o Treeview antes de adicionar novas conexões
             self.treeview.delete(*self.treeview.get_children())
@@ -228,7 +243,7 @@ class ConnectScreen:
             # Preenche o Treeview com as conexões salvas
             for conn in self.connections:
                 # Adiciona cada conexão ao Treeview
-                self.treeview.insert("", "end", values=(conn["server_name"], conn["database_name"]))
+                self.treeview.insert("", "end", iid=conn["connection_id"], values=(conn["server_name"], conn["database_name"]))
 
         except Exception as e:
             # Log de erro (opcional)
@@ -237,10 +252,6 @@ class ConnectScreen:
     def on_connect_btn(self):
         if not self._validate_fields():
             return
-        if self.var_check_remember.get():
-            # Salva a conexão se a opção "Remember" estiver marcada
-            self.save_connection()
-
         connection_data = {
             "server_name": self.entry_server_name.get(),
             "user_name": self.entry_user_name.get() if self.dropdown_authentication.get() == "SQL Authentication" else None,
@@ -248,21 +259,43 @@ class ConnectScreen:
             "authentication": self.dropdown_authentication.get(),
             "database_name": self.dropdown_database_name.get()
         }
+        
+        if self.var_check_remember.get():
+            self.save_connection(connection_data)
+
+        self.was_cancelled = False
+        if self.on_connect_callback:
+            self.on_connect_callback(connection_data)
+        self.connect_window.destroy()
+
+    def menu_connect(self):
+        iid = self.treeview.selection()[0]  # Obtém o ID do item selecionado
+        for connection in self.connections:
+            if connection["connection_id"] == iid:
+                connection_data = {
+                    "server_name": connection["server_name"],
+                    "user_name": connection["user_name"],
+                    "password": connection["password"],
+                    "authentication": connection["authentication"],
+                    "database_name": connection["database_name"]
+                }
+        if self.var_check_remember.get():
+            self.save_connection(connection_data)
+        
+        self.was_cancelled = False
         if self.on_connect_callback:
             self.on_connect_callback(connection_data)
         self.connect_window.destroy()
 
     def on_treeview_select(self, event):
-        selected_item = self.treeview.focus()  # Obtém o item selecionado
-        if not selected_item:
+        selected_items = self.treeview.selection()  # Obtém os itens selecionados
+        if not selected_items:
             return
-
-        values = self.treeview.item(selected_item, 'values')  # Retorna (server, database)
-        server, database = values
+        iid = selected_items[0]  # Pega o primeiro item selecionado
 
         # Encontra a conexão correspondente no dicionário salvo
         for conn in self.connections:
-            if conn["server_name"] == server and conn["database_name"] == database:
+            if conn["connection_id"] == iid:
                 # Preenche os campos
                 self.entry_server_name.delete(0, tk.END)
                 self.entry_server_name.insert(0, conn["server_name"])
@@ -280,7 +313,6 @@ class ConnectScreen:
                     self.entry_user_name.config(state="normal")
                     self.entry_user_name.delete(0, tk.END)
                     self.entry_user_name.insert(0, conn["user_name"])
-
                     self.entry_password.config(state="normal")
                     self.entry_password.delete(0, tk.END)
                     self.entry_password.insert(0, conn["password"])
@@ -288,14 +320,14 @@ class ConnectScreen:
                 self.dropdown_database_name.set(conn["database_name"])
                 break
 
-    def save_connection(self):
-        server_name = self.entry_server_name.get()
-        user_name = self.entry_user_name.get()
-        password = self.entry_password.get()
-        authentication = self.dropdown_authentication.get()
-        database_name = self.dropdown_database_name.get()
+    def save_connection(self, connection_data):
+        server_name = connection_data["server_name"]
+        user_name = connection_data["user_name"]
+        password = connection_data["password"]
+        authentication = connection_data["authentication"]
+        database_name = connection_data["database_name"]
 
-        saved_connections_manager.SavedConnectionsManager().save_connection(
+        scm().save_connection(
             server_name=server_name,
             user_name=user_name,
             password=password,
@@ -321,6 +353,49 @@ class ConnectScreen:
             messagebox.showwarning("Warning", "Database name is required.")
             return False
         return True
+    
+    def show_context_menu(self, event):
+        """Exibe o menu de contexto quando o botão direito é clicado na Treeview"""
+        try:
+            row_id = self.treeview.identify_row(event.y)
+
+            if row_id:
+                self.treeview.selection_set(row_id)
+                self.menu.entryconfig("Connect", state="normal")
+                self.menu.entryconfig("Delete", state="normal")
+            else:
+                self.treeview.selection_remove(self.treeview.selection())
+                self.menu.entryconfig("Connect", state="disabled")
+                self.menu.entryconfig("Delete", state="disabled")
+            if not self.treeview.get_children():
+                self.menu.entryconfig("Clear historic connection", state="disabled")
+            else:
+                self.menu.entryconfig("Clear historic connection", state="normal")
+            self.menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.menu.grab_release()
+
+    def clear_historic_connections(self):
+        """Remove todas as conexões salvas"""
+        confirm = messagebox.askyesno(
+            "Clear All Connections",
+            "This will delete ALL saved connections.\nAre you sure you want to continue?",
+            icon='warning'
+        )
+        
+        if confirm:
+            try:
+                scm().delete_all_connections()
+                self.get_saved_connections()
+                messagebox.showinfo("Success", "All connections have been deleted.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to clear connections: {str(e)}")
+
+    def _on_window_close(self):
+        """Chamado quando a janela é fechada sem conectar"""
+        if self.on_connect_callback:
+            self.on_connect_callback(None)  # Envia None para indicar cancelamento
+        self.connect_window.destroy()
 
 # Exemplo de como abrir a tela
 if __name__ == "__main__":

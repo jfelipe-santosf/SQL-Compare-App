@@ -1,10 +1,10 @@
 import tkinter as tk
 
 class FilterScreen:
-    def __init__(self, master):
+    def __init__(self, master, position: dict):
         # Criação da janela toplevel
         self.filter_window = tk.Toplevel(master)
-        self.filter_window.geometry("400x300")
+        self.filter_window.geometry(f"400x300+{position['x']}+{position['y']+20}")
         self.filter_window.title("filter objects by name")
         self.filter_window.resizable(False, False)
         self.filter_window.grab_set()  # Garante que a janela de filtro seja modal
