@@ -5,6 +5,7 @@ from app.core import CompareProcedureSchema as cps
 
 class MainScreen:
     def __init__(self, master):
+        self.comparer = cps()
         # Configuração da janela principal
         self.root = master
         self.root.geometry("1040x585")
@@ -273,57 +274,71 @@ class MainScreen:
         if not hasattr(self, 'source_connection') or not hasattr(self, 'target_connection'):
             return
         
-        self.source_connection.connect()
-        self.target_connection.connect()
+        try:
+            self.source_connection.connect()
+            self.target_connection.connect()
 
-        self.source_procedure_schema = self.source_connection.get_procedures_schema()
-        self.target_procedure_schema = self.target_connection.get_procedures_schema()
+            self.source_procedure_schema = self.source_connection.get_procedures_schema()
+            self.target_procedure_schema = self.target_connection.get_procedures_schema()
 
-        self.diff_procedures = []
-        self.to_crate_procedures = []
-        for source_proc in self.source_procedure_schema:
-            for target_proc in self.target_procedure_schema:
-                if source_proc['procedure_name'] == target_proc['procedure_name']:
+            self.diff_procedures = []
+            self.to_create_procedures = []
+            
+            # Criar comparador com configurações
+            comparer = cps(ignore_whitespace=True, ignore_comments=True)
+            
+            # Mapear procedures do target para busca rápida
+            target_procs_map = {p['procedure_name']: p for p in self.target_procedure_schema}
+            
+            for source_proc in self.source_procedure_schema:
+                target_proc = target_procs_map.get(source_proc['procedure_name'])
+                
+                if target_proc:
+                    # Compara apenas se as datas de modificação forem diferentes
                     if source_proc['last_modified_date'] != target_proc['last_modified_date']:
-                        diff_procedures = []
-                        source_body_diff, target_body_diff = cps.compare_procedure(
-                            source=source_proc['procedure_body'],
-                            target=target_proc['procedure_body']
+                        source_diff, target_diff = comparer.compare_procedure(
+                            source_proc['procedure_body'],
+                            target_proc['procedure_body']
                         )
-                        if source_body_diff and target_body_diff:
-                            diff_procedures.append({
+                        
+                        # Só adiciona se houver diferenças reais
+                        if source_diff is not None and target_diff is not None:
+                            self.diff_procedures.append({
                                 'procedure_name': source_proc['procedure_name'],
-                                'source_body': source_body_diff,
-                                'modified_date': source_proc['last_modified_date'],
-                                'target_body': target_body_diff,
-                                'modified_date': target_proc['last_modified_date']
+                                'source_body': '\n'.join(source_diff),
+                                'target_body': '\n'.join(target_diff),
+                                'source_modified': source_proc['last_modified_date'],
+                                'target_modified': target_proc['last_modified_date']
                             })
-                        self.diff_procedures.append(diff_procedures)
-                    break
-            self.to_crate_procedures.append(source_proc)
+                else:
+                    # Procedure não existe no target
+                    self.to_create_procedures.append(source_proc)
 
-        self._populate_treeview_with_differences()
+            self._populate_treeview_with_differences()
+            
+        except Exception as e:
+            print(f"Erro durante a comparação: {str(e)}")
+            # Mostrar mensagem de erro para o usuário
 
     def _populate_treeview_with_differences(self):
         """Popula a treeview com as diferenças encontradas entre source e target"""
         # Limpa a treeview antes de adicionar novos dados
-        self.treeview.delete(*self.tree.get_children())
+        self.treeview.delete(*self.treeview.get_children())
 
+        # Adiciona procedures com diferenças
         for diff in self.diff_procedures:
-            action = "Alter"
-            
             self.treeview.insert("", "end", values=(
                 diff['procedure_name'],
                 "Procedure",
-                action
+                "Alter"
             ))
 
+        # Adiciona procedures que precisam ser criadas
         for proc in self.to_crate_procedures:
-            action = "Create"
             self.treeview.insert("", "end", values=(
                 proc['procedure_name'],
                 "Procedure",
-                action
+                "Create"
             ))
 
     def _on_treeview_click(self, event):
@@ -342,16 +357,48 @@ class MainScreen:
         self.text_source_body.delete("1.0", "end")
         self.text_target_body.delete("1.0", "end")
 
+        # Remove todas as tags existentes
+        self.text_source_body.tag_remove("added", "1.0", "end")
+        self.text_source_body.tag_remove("modified", "1.0", "end")
+        self.text_target_body.tag_remove("removed", "1.0", "end")
+        self.text_target_body.tag_remove("modified", "1.0", "end")
+
+        # Configura as tags para colorização
+        self.text_source_body.tag_config("added", background="#ccffcc")  # Verde claro para adições
+        self.text_source_body.tag_config("modified", background="#ffff99")  # Amarelo para modificações
+        self.text_target_body.tag_config("removed", background="#ffcccc")  # Vermelho claro para remoções
+        self.text_target_body.tag_config("modified", background="#ffff99")  # Amarelo para modificações
+
         # Verifica se é uma diferença ou criação
         if action == "Alter":
             # Busca o objeto na lista de diferenças
             for diff in self.diff_procedures:
                 if diff['procedure_name'] == object_name:
+                    # Insere o texto fonte com colorização
                     self.text_source_body.insert("1.0", diff['source_body'])
+                    self._apply_line_coloring(self.text_source_body, diff['source_body'])
+                    
+                    # Insere o texto alvo com colorização
                     self.text_target_body.insert("1.0", diff['target_body'])
-                    self._set_source_modification_date(diff['modified_date'])
-                    self._set_target_modification_date(diff['modified_date'])
+                    self._apply_line_coloring(self.text_target_body, diff['target_body'])
+                    
+                    # Atualiza as datas de modificação
+                    self._set_source_modification_date(diff['source_modified'])
+                    self._set_target_modification_date(diff['target_modified'])
                     break
+
+    def _apply_line_coloring(self, text_widget: tk.Text, content: str):
+        """Aplica colorização baseada nos prefixos das linhas"""
+        for i, line in enumerate(content.split('\n')):
+            line_start = f"{i+1}.0"
+            line_end = f"{i+1}.end"
+            
+            if line.startswith("++"):
+                text_widget.tag_add("added", line_start, line_end)
+            elif line.startswith("--"):
+                text_widget.tag_add("removed", line_start, line_end)
+            elif line.startswith("||"):
+                text_widget.tag_add("modified", line_start, line_end)
 
     def _set_source_modification_date(self, date_str):
         """Atualiza a data de modificação do source"""
