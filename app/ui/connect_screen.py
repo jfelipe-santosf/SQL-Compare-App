@@ -121,16 +121,16 @@ class ConnectScreen:
                                      command=self.on_connect_btn)
         self.btn_connect.place(x=265, y=190, width=80, height=20)
         
-        update_authentication(None)
-        self.get_saved_connections()
 
         # Bindings e eventos
-        self.connect_window.bind("<Return>", lambda event: self.on_connect_btn())
         self.connect_window.protocol("WM_DELETE_WINDOW", self._on_window_close)
+        self.connect_window.bind("<Return>", lambda event: self.on_connect_btn())
         self.treeview.bind("<Button-3>", self.show_context_menu)
         self.treeview.bind("<ButtonRelease-1>", self.on_treeview_select)
-        self.treeview.bind("<double-Button-1>", self.menu_connect)
+        self.treeview.bind("<Double-Button-1>", self.menu_connect)
         self.dropdown_database_name.bind("<Button-1>", lambda e: threading.Thread(target=self.get_databases).start())
+        update_authentication(None)
+        self.get_saved_connections()
 
     def _delete_selected_connection(self):
         """ Exclui a conexão selecionada no Treeview.
@@ -275,7 +275,7 @@ class ConnectScreen:
             self.on_connect_callback(connection_data)
         self.connect_window.destroy()
 
-    def menu_connect(self):
+    def menu_connect(self, event=None):
         iid = self.treeview.selection()[0]  # Obtém o ID do item selecionado
         for connection in self.connections:
             if connection["connection_id"] == iid:
