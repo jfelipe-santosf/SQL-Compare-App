@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk  # Importa ttk para estilos adicionais
 from app.utils import ScreenNavigationManager as snm, DatabaseConnectionManager as dcm
+from app.core import CompareProcedureSchema as cps
 
 class MainScreen:
     def __init__(self, master):
@@ -18,7 +19,13 @@ class MainScreen:
         frame_top.pack(fill="x", side="top")
 
         # Botão Compare (pequeno, canto superior esquerdo)
-        btn_start_compare = tk.Button(frame_top, text="Compare", bg="#F0F0F0", font=("Inter", 10), fg="#000000")
+        btn_start_compare = tk.Button(frame_top,
+                                      text="Compare",
+                                      bg="#F0F0F0",
+                                      font=("Inter", 10),
+                                      fg="#000000",
+                                      command=self._on_compare_click
+                                      )
         btn_start_compare.place(relx=0.01, rely=0.1, relwidth=0.08, height=25)
 
         # Botão Filter (pequeno, ao lado do Compare)
@@ -43,7 +50,7 @@ class MainScreen:
                                            command=lambda: snm(self.root).navigate_to_connect_screen(
                                                {'x': self.btn_select_source.winfo_rootx(),
                                                 'y': self.btn_select_source.winfo_rooty()},
-                                                self.handle_source_connection
+                                                self._handle_source_connection
                                                 )
                                             )
         self.btn_select_source.place(relx=0.01, rely=0.6, relwidth=0.489, height=25)
@@ -57,7 +64,7 @@ class MainScreen:
                                            command=lambda: snm(self.root).navigate_to_connect_screen(
                                                {'x': self.btn_select_target.winfo_rootx(),
                                                 'y': self.btn_select_target.winfo_rooty()},
-                                                self.handle_target_connection
+                                                self._handle_target_connection
                                                 )
                                             )
         self.btn_select_target.place(relx=0.5, rely=0.6, relwidth=0.49, height=25)
@@ -67,18 +74,18 @@ class MainScreen:
         frame_treeview.pack(fill="both", expand=True, padx=5, pady=5)
 
         columns = ("Object Name", "Object Type", "Action")
-        treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings", selectmode="browse")
+        self.treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings", selectmode="browse")
 
         # Configuração das colunas
-        treeview.heading("Object Name", text="Object Name")
-        treeview.heading("Object Type", text="Object Type")
-        treeview.heading("Action", text="Action")
+        self.treeview.heading("Object Name", text="Object Name")
+        self.treeview.heading("Object Type", text="Object Type")
+        self.treeview.heading("Action", text="Action")
 
-        treeview.column("Object Name", anchor="center")
-        treeview.column("Object Type", anchor="center")
-        treeview.column("Action", anchor="center")
+        self.treeview.column("Object Name", anchor="center")
+        self.treeview.column("Object Type", anchor="center")
+        self.treeview.column("Action", anchor="center")
 
-        treeview.pack(fill="both", expand=True)
+        self.treeview.pack(fill="both", expand=True)
 
         ## Corpo dos objetos
         frame_object_body = tk.Frame(self.root)
@@ -98,13 +105,13 @@ class MainScreen:
         scrollbar_source_x = tk.Scrollbar(frame_source_scroll, orient="horizontal")
         scrollbar_source_x.pack(side="bottom", fill="x")
 
-        text_source_body = tk.Text(frame_source_scroll, bg="#FFFFFF", wrap="none", 
+        self.text_source_body = tk.Text(frame_source_scroll, bg="#FFFFFF", wrap="none", 
                                  yscrollcommand=scrollbar_source_y.set, 
                                  xscrollcommand=scrollbar_source_x.set)
-        text_source_body.pack(side="left", fill="both", expand=True)
+        self.text_source_body.pack(side="left", fill="both", expand=True)
 
-        scrollbar_source_y.config(command=text_source_body.yview)
-        scrollbar_source_x.config(command=text_source_body.xview)
+        scrollbar_source_y.config(command=self.text_source_body.yview)
+        scrollbar_source_x.config(command=self.text_source_body.xview)
 
         # Frame para o contador de linhas (centro)
         frame_line_numbers = tk.Frame(frame_object_body, width=30)
@@ -123,10 +130,10 @@ class MainScreen:
         scrollbar_target_x = tk.Scrollbar(frame_target_scroll, orient="horizontal")
         scrollbar_target_x.pack(side="bottom", fill="x")
 
-        text_target_body = tk.Text(frame_target_scroll, bg="#FFFFFF", wrap="none", 
+        self.text_target_body = tk.Text(frame_target_scroll, bg="#FFFFFF", wrap="none", 
                                  yscrollcommand=scrollbar_target_y.set, 
                                  xscrollcommand=scrollbar_target_x.set)
-        text_target_body.pack(side="left", fill="both", expand=True)
+        self.text_target_body.pack(side="left", fill="both", expand=True)
 
         # Frame para as informações de data (fixo na parte inferior)
         frame_bottom_info = tk.Frame(self.root, height=20, bg="#F0F0F0", bd=1, relief="sunken")
@@ -155,88 +162,81 @@ class MainScreen:
         # Ajuste no frame_object_body para deixar espaço para as informações
         frame_object_body.pack_configure(pady=(5,25))  # Remove padding inferior pois o frame_bottom_info já tem
 
-        scrollbar_target_y.config(command=text_target_body.yview)
-        scrollbar_target_x.config(command=text_target_body.xview)
+        scrollbar_target_y.config(command=self.text_target_body.yview)
+        scrollbar_target_x.config(command=self.text_target_body.xview)
 
         # Sincroniza as barras de rolagem
-        text_source_body['yscrollcommand'] = lambda *args: [scrollbar_source_y.set(*args), scrollbar_target_y.set(*args)]
-        text_target_body['yscrollcommand'] = lambda *args: [scrollbar_target_y.set(*args), scrollbar_source_y.set(*args)]
+        self.text_source_body['yscrollcommand'] = lambda *args: [scrollbar_source_y.set(*args), scrollbar_target_y.set(*args)]
+        self.text_target_body['yscrollcommand'] = lambda *args: [scrollbar_target_y.set(*args), scrollbar_source_y.set(*args)]
 
-        scrollbar_source_y.config(command=lambda *args: [text_source_body.yview(*args), text_target_body.yview(*args)])
-        scrollbar_target_y.config(command=lambda *args: [text_source_body.yview(*args), text_target_body.yview(*args)])
+        scrollbar_source_y.config(command=lambda *args: [self.text_source_body.yview(*args), self.text_target_body.yview(*args)])
+        scrollbar_target_y.config(command=lambda *args: [self.text_source_body.yview(*args), self.text_target_body.yview(*args)])
 
         # Ajusta a função de rolagem do mouse para Windows
         def _on_mousewheel(event):
             delta = -1 if event.delta > 0 else 1  # Define o delta com base na direção da rolagem
 
-            text_source_body.yview_scroll(delta, "units")
-            text_target_body.yview_scroll(delta, "units")
+            self.text_source_body.yview_scroll(delta, "units")
+            self.text_target_body.yview_scroll(delta, "units")
             line_numbers.yview_scroll(delta, "units")
 
         # Vincula o evento de rolagem do mouse para Windows
-        text_source_body.bind_all("<MouseWheel>", _on_mousewheel)
-        text_target_body.bind_all("<MouseWheel>", _on_mousewheel)
+        self.text_source_body.bind_all("<MouseWheel>", _on_mousewheel)
+        self.text_target_body.bind_all("<MouseWheel>", _on_mousewheel)
 
-        def update_line_numbers():
+        def _update_line_numbers():
             line_numbers.config(state="normal")
             line_numbers.delete("1.0", "end")
             max_lines = max(
-                int(text_source_body.index("end-1c").split(".")[0]),
-                int(text_target_body.index("end-1c").split(".")[0])
+                int(self.text_source_body.index("end-1c").split(".")[0]),
+                int(self.text_target_body.index("end-1c").split(".")[0])
             )
             for i in range(1, max_lines + 1):
                 line_numbers.insert("end", f"{i}\n")
             line_numbers.config(state="disabled")
 
-        def sync_scroll(*args):
+        def _sync_scroll(*args):
             scrollbar_source_y.set(*args)
             scrollbar_target_y.set(*args)
             line_numbers.yview_moveto(args[0])
 
-        def on_scroll(*args):
-            text_source_body.yview(*args)
-            text_target_body.yview(*args)
+        def _on_scroll(*args):
+            self.text_source_body.yview(*args)
+            self.text_target_body.yview(*args)
             line_numbers.yview(*args)
 
         # Atualiza o comando de rolagem para sincronizar com o contador central
-        text_source_body['yscrollcommand'] = sync_scroll
-        text_target_body['yscrollcommand'] = sync_scroll
-        scrollbar_source_y.config(command=on_scroll)
-        scrollbar_target_y.config(command=on_scroll)
+        self.text_source_body['yscrollcommand'] = _sync_scroll
+        self.text_target_body['yscrollcommand'] = _sync_scroll
+        scrollbar_source_y.config(command=_on_scroll)
+        scrollbar_target_y.config(command=_on_scroll)
 
         # Atualiza o contador de linhas ao modificar o conteúdo
-        text_source_body.bind("<KeyRelease>", lambda event: update_line_numbers())
-        text_target_body.bind("<KeyRelease>", lambda event: update_line_numbers())
-        text_source_body.bind("<MouseWheel>", lambda event: update_line_numbers())
-        text_target_body.bind("<MouseWheel>", lambda event: update_line_numbers())
+        self.text_source_body.bind("<KeyRelease>", lambda event: _update_line_numbers())
+        self.text_target_body.bind("<KeyRelease>", lambda event: _update_line_numbers())
+        self.text_source_body.bind("<MouseWheel>", lambda event: _update_line_numbers())
+        self.text_target_body.bind("<MouseWheel>", lambda event: _update_line_numbers())
 
         # Bloqueia os widgets text_source_body e text_target_body para edição
-        text_source_body.config(state="disabled")
-        text_target_body.config(state="disabled")
+        self.text_source_body.config(state="disabled")
+        self.text_target_body.config(state="disabled")
 
         # Inicializa o contador de linhas
-        update_line_numbers()
-        # self.set_source_modification_date("2023-11-15 14:30")
-        # self.set_target_modification_date("2023-11-14 09:45")
+        _update_line_numbers()
+        # self._set_source_modification_date("2023-11-15 14:30")
+        # self._set_target_modification_date("2023-11-14 09:45")
 
-    def set_source_modification_date(self, date_str):
-        """Atualiza a data de modificação do source"""
-        self.lbl_source_date.config(text=f"Última modificação: {date_str}")
+        self.treeview.bind("<Button-1>", self._on_treeview_click)
 
-    def set_target_modification_date(self, date_str):
-        """Atualiza a data de modificação do target"""
-        self.lbl_target_date.config(text=f"Última modificação: {date_str}")
-
-    def handle_source_connection(self, connection_data):
-        print("Fonte conectada:", connection_data)
+    def _handle_source_connection(self, connection_data):
         # Aqui você pode armazenar os dados para uso posterior
-        
         try:
-            self.source_connection = dcm(connection_data['server_name'],
-                                        connection_data['user_name'],
-                                        connection_data['password'],
-                                        connection_data['authentication'],
-                                        connection_data['database_name'])
+            self.source_connection = dcm(server=connection_data['server_name'],
+                                        username=connection_data['user_name'],
+                                        password=connection_data['password'],
+                                        authentication=connection_data['authentication'],
+                                        database=connection_data['database_name'])
+            print("Fonte conectada:", connection_data)
 
             self.btn_select_source.config(
                 text=f"{connection_data['server_name']}/{connection_data['database_name']}"
@@ -248,15 +248,15 @@ class MainScreen:
             )
             return
         
-    def handle_target_connection(self, connection_data):
-        print("Alvo conectado:", connection_data)
+    def _handle_target_connection(self, connection_data):
         # Aqui você pode armazenar os dados para uso posterior
         try:
-            self.target_connection = dcm(connection_data['server_name'],
-                                        connection_data['user_name'],
-                                        connection_data['password'],
-                                        connection_data['authentication'],
-                                        connection_data['database_name'])
+            self.target_connection = dcm(server=connection_data['server_name'],
+                                        username=connection_data['user_name'],
+                                        password=connection_data['password'],
+                                        authentication=connection_data['authentication'],
+                                        database=connection_data['database_name'])
+            print("Alvo conectado:", connection_data)
 
             self.btn_select_target.config(
                 text=f"{connection_data['server_name']}/{connection_data['database_name']}"
@@ -267,6 +267,99 @@ class MainScreen:
                 state="normal"
             )
             return
+
+    def _on_compare_click(self):
+        """inicia a comparação entre source e target"""
+        if not hasattr(self, 'source_connection') or not hasattr(self, 'target_connection'):
+            return
+        
+        self.source_connection.connect()
+        self.target_connection.connect()
+
+        self.source_procedure_schema = self.source_connection.get_procedures_schema()
+        self.target_procedure_schema = self.target_connection.get_procedures_schema()
+
+        self.diff_procedures = []
+        self.to_crate_procedures = []
+        for source_proc in self.source_procedure_schema:
+            for target_proc in self.target_procedure_schema:
+                if source_proc['procedure_name'] == target_proc['procedure_name']:
+                    if source_proc['last_modified_date'] != target_proc['last_modified_date']:
+                        diff_procedures = []
+                        source_body_diff, target_body_diff = cps.compare_procedure(
+                            source=source_proc['procedure_body'],
+                            target=target_proc['procedure_body']
+                        )
+                        if source_body_diff and target_body_diff:
+                            diff_procedures.append({
+                                'procedure_name': source_proc['procedure_name'],
+                                'source_body': source_body_diff,
+                                'modified_date': source_proc['last_modified_date'],
+                                'target_body': target_body_diff,
+                                'modified_date': target_proc['last_modified_date']
+                            })
+                        self.diff_procedures.append(diff_procedures)
+                    break
+            self.to_crate_procedures.append(source_proc)
+
+        self._populate_treeview_with_differences()
+
+    def _populate_treeview_with_differences(self):
+        """Popula a treeview com as diferenças encontradas entre source e target"""
+        # Limpa a treeview antes de adicionar novos dados
+        self.treeview.delete(*self.tree.get_children())
+
+        for diff in self.diff_procedures:
+            action = "Alter"
+            
+            self.treeview.insert("", "end", values=(
+                diff['procedure_name'],
+                "Procedure",
+                action
+            ))
+
+        for proc in self.to_crate_procedures:
+            action = "Create"
+            self.treeview.insert("", "end", values=(
+                proc['procedure_name'],
+                "Procedure",
+                action
+            ))
+
+    def _on_treeview_click(self, event):
+        """Exibe o conteúdo do objeto selecionado na treeview nos campos de texto"""
+        selected_item = self.treeview.selection()
+        if not selected_item:
+            return
+        
+        item_values = self.treeview.item(selected_item, "values")
+        object_name = item_values[0]
+        action = item_values[2]
+
+        # Limpa os campos de texto
+        self.text_source_body.config(state="normal")
+        self.text_target_body.config(state="normal")
+        self.text_source_body.delete("1.0", "end")
+        self.text_target_body.delete("1.0", "end")
+
+        # Verifica se é uma diferença ou criação
+        if action == "Alter":
+            # Busca o objeto na lista de diferenças
+            for diff in self.diff_procedures:
+                if diff['procedure_name'] == object_name:
+                    self.text_source_body.insert("1.0", diff['source_body'])
+                    self.text_target_body.insert("1.0", diff['target_body'])
+                    self._set_source_modification_date(diff['modified_date'])
+                    self._set_target_modification_date(diff['modified_date'])
+                    break
+
+    def _set_source_modification_date(self, date_str):
+        """Atualiza a data de modificação do source"""
+        self.lbl_source_date.config(text=f"Última modificação: {date_str}")
+
+    def _set_target_modification_date(self, date_str):
+        """Atualiza a data de modificação do target"""
+        self.lbl_target_date.config(text=f"Última modificação: {date_str}")
         
 # Exemplo de como abrir a tela
 if __name__ == "__main__":

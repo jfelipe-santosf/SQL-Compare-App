@@ -46,3 +46,38 @@ class DatabaseConnectionManager:
         if self.connection:
             self.connection.close()
             print("Connection closed")
+
+    def get_procedures_schema(self):
+        print(f"Fetching procedures schema for database: {self.database}")
+        if not self.connection:
+            raise Exception("Not connected to the database")
+
+        cursor = None
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(f"""
+                SELECT
+                    p.name AS [procedure_name],
+                    p.modify_date  AS [last_modified_date],
+                    OBJECT_DEFINITION(p.object_id) AS [procedure_body]
+                FROM 
+                    sys.procedures p
+                WHERE 
+                    p.is_ms_shipped = 0
+                ORDER BY
+                    [procedure_name]
+            """)
+            procedures = [
+                {
+                    "procedure_name": row[0],
+                    "last_modified_date": row[1],
+                    "procedure_body": row[2]
+                }
+                for row in cursor.fetchall()
+            ]
+            return procedures
+        except pyodbc.Error as e:
+            raise Exception(f"Error fetching procedures schema: {e}")
+        finally:
+            if cursor:
+                cursor.close()

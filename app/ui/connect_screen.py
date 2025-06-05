@@ -203,6 +203,7 @@ class ConnectScreen:
                 self.connect_window.after(0, lambda: self.dropdown_database_name.config(
                     values=databases if databases else ["No databases found"]
                 ))
+                db_conn.close()
             except Exception as e:
                 print(f"Error fetching databases: {e}")
 
@@ -267,6 +268,17 @@ class ConnectScreen:
             "database_name": self.dropdown_database_name.get()
         }
         
+        try:
+            dcm(
+                server=connection_data["server_name"],
+                username=connection_data["user_name"],
+                password=connection_data["password"],
+                authentication=connection_data["authentication"],
+                database=connection_data["database_name"]
+            ).connect()
+        except Exception as e:
+            messagebox.showerror("Connection Error", f"Failed to connect to the database: {e}")
+            return
         if self.var_check_remember.get():
             self.save_connection(connection_data)
 
@@ -281,11 +293,24 @@ class ConnectScreen:
             if connection["connection_id"] == iid:
                 connection_data = {
                     "server_name": connection["server_name"],
-                    "user_name": connection["user_name"],
-                    "password": connection["password"],
+                    "user_name": connection["user_name"] if connection["authentication"] == "SQL Authentication" else None,
+                    "password": connection["password"] if connection["authentication"] == "SQL Authentication" else None,
                     "authentication": connection["authentication"],
                     "database_name": connection["database_name"]
                 }
+
+        try:
+            dcm(
+                server=connection_data["server_name"],
+                username=connection_data["user_name"],
+                password=connection_data["password"],
+                authentication=connection_data["authentication"],
+                database=connection_data["database_name"]
+            ).connect()
+        except Exception as e:
+            messagebox.showerror("Connection Error", f"Failed to connect to the database: {e}")
+            return
+
         if self.var_check_remember.get():
             self.save_connection(connection_data)
         
