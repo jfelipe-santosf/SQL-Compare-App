@@ -45,3 +45,4 @@ Thumbs.db
 # folder specific ignores
 test/
 _internal/
+tests/

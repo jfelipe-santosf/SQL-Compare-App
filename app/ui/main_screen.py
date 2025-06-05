@@ -13,55 +13,58 @@ class MainScreen:
         # Configura a janela para abrir em tela cheia
         self.root.state('zoomed')
 
-        # Topo
-        frame_top = tk.Frame(self.root, bg="#FFFFFF")
-        frame_top.pack(fill="x", side="top")  # Usa layout responsivo para o topo
+        # Topo (substitua o frame_top atual por este)
+        frame_top = tk.Frame(self.root, bg="#FFFFFF", height=60)  # Altura fixa para duas linhas
+        frame_top.pack(fill="x", side="top")
 
-        # Botão Compare
+        # Botão Compare (pequeno, canto superior esquerdo)
         btn_start_compare = tk.Button(frame_top, text="Compare", bg="#F0F0F0", font=("Inter", 10), fg="#000000")
-        btn_start_compare.pack_propagate(False)  # Impede que o botão encolha
-        btn_start_compare.pack(side="left", padx=5, pady=5)
+        btn_start_compare.place(relx=0.01, rely=0.1, relwidth=0.08, height=25)
 
-        # Botão Filter
-        self.btn_filter = tk.Button(
-            frame_top,
-            text="Filter",
-            bg="#F0F0F0",
-            font=("Inter", 10),
-            fg="#000000",
-            command=lambda: snm(self.root).navigate_to_filter_screen({'x': self.btn_filter.winfo_rootx(), 'y': self.btn_filter.winfo_rooty()})
-        )
-        self.btn_filter.pack(side="left", padx=5, pady=5)
+        # Botão Filter (pequeno, ao lado do Compare)
+        self.btn_filter = tk.Button(frame_top,
+                                    text="Filter",
+                                    bg="#F0F0F0",
+                                    font=("Inter", 10),
+                                    fg="#000000",
+                                    command=lambda: snm(self.root).navigate_to_filter_screen(
+                                        {'x': self.btn_filter.winfo_rootx(),
+                                        'y': self.btn_filter.winfo_rooty()}
+                                        )
+                                    )
+        self.btn_filter.place(relx=0.095, rely=0.1, relwidth=0.05, height=25)
 
-        # Botão Select Source
-        self.btn_select_source = tk.Button(
-            frame_top, text="Select source",
-            bg="#F0F0F0",
-            font=("Inter", 10),
-            fg="#000000",
-            command=lambda: snm(self.root).navigate_to_connect_screen(
-                1, {'x': self.btn_select_source.winfo_rootx(), 'y': self.btn_select_source.winfo_rooty()},
-                self.handle_source_connection
-            )
-        )
-        self.btn_select_source.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        # Botão Select Source (grande, linha inferior)
+        self.btn_select_source = tk.Button(frame_top,
+                                           text="Select source",
+                                           bg="#F0F0F0",
+                                           font=("Inter", 10),
+                                           fg="#000000",
+                                           command=lambda: snm(self.root).navigate_to_connect_screen(
+                                               {'x': self.btn_select_source.winfo_rootx(),
+                                                'y': self.btn_select_source.winfo_rooty()},
+                                                self.handle_source_connection
+                                                )
+                                            )
+        self.btn_select_source.place(relx=0.01, rely=0.6, relwidth=0.489, height=25)
 
-        # Botão Select Target
-        self.btn_select_target = tk.Button(
-            frame_top, text="Select target",
-            bg="#F0F0F0",
-            font=("Inter", 10),
-            fg="#000000",
-            command=lambda: snm(self.root).navigate_to_connect_screen(
-                1, {'x': self.btn_select_target.winfo_rootx(), 'y': self.btn_select_target.winfo_rooty()},
-                self.handle_target_connection
-            )
-        )
-        self.btn_select_target.pack(side="left", padx=5, pady=5, fill="x", expand=True)
+        # Botão Select Target (grande, linha inferior)
+        self.btn_select_target = tk.Button(frame_top,
+                                           text="Select target",
+                                           bg="#F0F0F0",
+                                           font=("Inter", 10),
+                                           fg="#000000",
+                                           command=lambda: snm(self.root).navigate_to_connect_screen(
+                                               {'x': self.btn_select_target.winfo_rootx(),
+                                                'y': self.btn_select_target.winfo_rooty()},
+                                                self.handle_target_connection
+                                                )
+                                            )
+        self.btn_select_target.place(relx=0.5, rely=0.6, relwidth=0.49, height=25)
 
         # Treeview para objetos diferentes
         frame_treeview = tk.Frame(self.root, bg="#FFFFFF")
-        frame_treeview.pack(fill="both", expand=True, padx=10, pady=5)
+        frame_treeview.pack(fill="both", expand=True, padx=5, pady=5)
 
         columns = ("Object Name", "Object Type", "Action")
         treeview = ttk.Treeview(frame_treeview, columns=columns, show="headings", selectmode="browse")
@@ -77,13 +80,18 @@ class MainScreen:
 
         treeview.pack(fill="both", expand=True)
 
-        # Corpo dos objetos
+        ## Corpo dos objetos
         frame_object_body = tk.Frame(self.root)
-        frame_object_body.pack(fill="both", expand=True, padx=10, pady=5)
+        frame_object_body.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Adiciona scrollbars sincronizados para text_source_body e text_target_body
+        # Configuração do grid
+        frame_object_body.grid_columnconfigure(0, weight=1)  # Texto fonte
+        frame_object_body.grid_columnconfigure(1, weight=0)  # Contador (largura fixa)
+        frame_object_body.grid_columnconfigure(2, weight=1)  # Texto alvo
+
+        # Frame para o texto fonte (esquerda)
         frame_source_scroll = tk.Frame(frame_object_body)
-        frame_source_scroll.pack(side="left", fill="both", expand=True, padx=5)
+        frame_source_scroll.grid(row=0, column=0, sticky="nsew", padx=(0,5))
 
         scrollbar_source_y = tk.Scrollbar(frame_source_scroll, orient="vertical")
         scrollbar_source_y.pack(side="right", fill="y")
@@ -91,15 +99,24 @@ class MainScreen:
         scrollbar_source_x.pack(side="bottom", fill="x")
 
         text_source_body = tk.Text(frame_source_scroll, bg="#FFFFFF", wrap="none", 
-                                   yscrollcommand=scrollbar_source_y.set, 
-                                   xscrollcommand=scrollbar_source_x.set)
+                                 yscrollcommand=scrollbar_source_y.set, 
+                                 xscrollcommand=scrollbar_source_x.set)
         text_source_body.pack(side="left", fill="both", expand=True)
 
         scrollbar_source_y.config(command=text_source_body.yview)
         scrollbar_source_x.config(command=text_source_body.xview)
 
+        # Frame para o contador de linhas (centro)
+        frame_line_numbers = tk.Frame(frame_object_body, width=30)
+        frame_line_numbers.grid(row=0, column=1, sticky="ns")
+
+        # Contador de linhas
+        line_numbers = tk.Text(frame_line_numbers, width=4, bg="#F0F0F0", state="disabled", wrap="none")
+        line_numbers.pack(side="left", fill="y")
+
+        # Frame para o texto alvo (direita)
         frame_target_scroll = tk.Frame(frame_object_body)
-        frame_target_scroll.pack(side="right", fill="both", expand=True, padx=5)
+        frame_target_scroll.grid(row=0, column=2, sticky="nsew", padx=(5,0))
 
         scrollbar_target_y = tk.Scrollbar(frame_target_scroll, orient="vertical")
         scrollbar_target_y.pack(side="right", fill="y")
@@ -107,9 +124,36 @@ class MainScreen:
         scrollbar_target_x.pack(side="bottom", fill="x")
 
         text_target_body = tk.Text(frame_target_scroll, bg="#FFFFFF", wrap="none", 
-                                   yscrollcommand=scrollbar_target_y.set, 
-                                   xscrollcommand=scrollbar_target_x.set)
+                                 yscrollcommand=scrollbar_target_y.set, 
+                                 xscrollcommand=scrollbar_target_x.set)
         text_target_body.pack(side="left", fill="both", expand=True)
+
+        # Frame para as informações de data (fixo na parte inferior)
+        frame_bottom_info = tk.Frame(self.root, height=20, bg="#F0F0F0", bd=1, relief="sunken")
+        frame_bottom_info.place(relx=0, rely=1, relwidth=1, anchor="sw", y=-5)  # 5px da borda inferior
+        
+        # Label para data do source (esquerda)
+        self.lbl_source_date = tk.Label(
+            frame_bottom_info, 
+            text="Última modificação: -", 
+            bg="#F0F0F0", 
+            anchor="w", 
+            padx=10
+        )
+        self.lbl_source_date.pack(side="left", fill="x", expand=True)
+        
+        # Label para data do target (direita)
+        self.lbl_target_date = tk.Label(
+            frame_bottom_info, 
+            text="Última modificação: -", 
+            bg="#F0F0F0", 
+            anchor="e", 
+            padx=10
+        )
+        self.lbl_target_date.pack(side="right", fill="x", expand=True)
+
+        # Ajuste no frame_object_body para deixar espaço para as informações
+        frame_object_body.pack_configure(pady=(5,25))  # Remove padding inferior pois o frame_bottom_info já tem
 
         scrollbar_target_y.config(command=text_target_body.yview)
         scrollbar_target_x.config(command=text_target_body.xview)
@@ -132,10 +176,6 @@ class MainScreen:
         # Vincula o evento de rolagem do mouse para Windows
         text_source_body.bind_all("<MouseWheel>", _on_mousewheel)
         text_target_body.bind_all("<MouseWheel>", _on_mousewheel)
-
-        # Remove contadores individuais e adicione um contador de linhas centralizado
-        line_numbers = tk.Text(frame_object_body, width=4, bg="#F0F0F0", state="disabled", wrap="none")
-        line_numbers.pack(side="left", fill="y")
 
         def update_line_numbers():
             line_numbers.config(state="normal")
@@ -176,7 +216,17 @@ class MainScreen:
 
         # Inicializa o contador de linhas
         update_line_numbers()
-        
+        # self.set_source_modification_date("2023-11-15 14:30")
+        # self.set_target_modification_date("2023-11-14 09:45")
+
+    def set_source_modification_date(self, date_str):
+        """Atualiza a data de modificação do source"""
+        self.lbl_source_date.config(text=f"Última modificação: {date_str}")
+
+    def set_target_modification_date(self, date_str):
+        """Atualiza a data de modificação do target"""
+        self.lbl_target_date.config(text=f"Última modificação: {date_str}")
+
     def handle_source_connection(self, connection_data):
         print("Fonte conectada:", connection_data)
         # Aqui você pode armazenar os dados para uso posterior
