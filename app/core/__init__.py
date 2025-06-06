@@ -1,3 +1,3 @@
 # app/core/
 
-from app.core.compare_proc_schema import CompareProcedureSchema
+from app.core.winmerge_comparator import WinMergeLikeComparator
