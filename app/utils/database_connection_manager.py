@@ -8,7 +8,6 @@ class DatabaseConnectionManager:
         self.database = database
         self.authentication = authentication
         self.connection = None
-        print(f'connecting to {self.server}')
 
     def connect(self):
         try:
@@ -20,12 +19,10 @@ class DatabaseConnectionManager:
                 self.connection = pyodbc.connect(
                     f'DRIVER={{SQL Server}};SERVER={self.server};UID={self.username};PWD={self.password};DATABASE={self.database or "master"}'
                 )
-            print("Connection successful")
         except pyodbc.Error as e:
             raise Exception(f"Error connecting to the database: {e}")
 
     def get_all_databases(self):
-        print("Fetching all databases...")
         if not self.connection:
             raise Exception("Not connected to the database")
 
@@ -36,7 +33,6 @@ class DatabaseConnectionManager:
             databases = [row[0] for row in cursor.fetchall()]
             return databases
         except pyodbc.Error as e:
-            print(f"Error fetching databases: {e}")
             return []
         finally:
             if cursor:
@@ -45,4 +41,39 @@ class DatabaseConnectionManager:
     def close(self):
         if self.connection:
             self.connection.close()
-            print("Connection closed")
+
+    def get_procedures_schema(self):
+        if not self.connection:
+            raise Exception("Not connected to the database")
+
+        cursor = None
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(f"""
+                SELECT
+                    p.object_id AS [id],
+                    p.name AS [procedure_name],
+                    p.modify_date  AS [last_modified_date],
+                    OBJECT_DEFINITION(p.object_id) AS [procedure_body]
+                FROM 
+                    sys.procedures p
+                WHERE 
+                    p.is_ms_shipped = 0
+                ORDER BY
+                    [procedure_name]
+            """)
+            procedures = [
+                {
+                    "id": row[0],
+                    "procedure_name": row[1],
+                    "last_modified_date": row[2],
+                    "procedure_body": row[3]
+                }
+                for row in cursor.fetchall()
+            ]
+            return procedures
+        except pyodbc.Error as e:
+            raise Exception(f"Error fetching procedures schema: {e}")
+        finally:
+            if cursor:
+                cursor.close()
