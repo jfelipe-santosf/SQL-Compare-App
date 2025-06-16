@@ -14,6 +14,16 @@ class MainScreen:
         # Configura a janela para abrir em tela cheia
         self.root.state('zoomed')
 
+        self._frame_top()
+
+        self._frame_treeview()
+
+        self._frame_object_body()
+
+
+        self.treeview.bind("<Button-1>", self._on_treeview_click)
+
+    def _frame_top(self):
         # Topo (substitua o frame_top atual por este)
         frame_top = tk.Frame(self.root, bg="#FFFFFF", height=60)  # Altura fixa para duas linhas
         frame_top.pack(fill="x", side="top")
@@ -69,6 +79,7 @@ class MainScreen:
                                             )
         self.btn_select_target.place(relx=0.5, rely=0.6, relwidth=0.49, height=25)
 
+    def _frame_treeview(self):
         # Treeview para objetos diferentes
         frame_treeview = tk.Frame(self.root, bg="#FFFFFF")
         frame_treeview.pack(fill="both", expand=True, padx=5, pady=5)
@@ -87,6 +98,7 @@ class MainScreen:
 
         self.treeview.pack(fill="both", expand=True)
 
+    def _frame_object_body(self):
         ## Corpo dos objetos
         frame_object_body = tk.Frame(self.root)
         frame_object_body.pack(fill="both", expand=True, padx=5, pady=5)
@@ -233,9 +245,6 @@ class MainScreen:
         self.text_target_body.tag_config("--", background="misty rose")
         self.text_target_body.tag_config("~~", background="light goldenrod")
 
-
-        self.treeview.bind("<Button-1>", self._on_treeview_click)
-
     def _handle_source_connection(self, connection_data):
         # Aqui você pode armazenar os dados para uso posterior
         try:
@@ -340,6 +349,7 @@ class MainScreen:
             ))
 
     def _insert_line(self, txt, line, tag=None):
+        print(f"Inserindo linha: {line} com tag: {tag}")
         txt.insert(tk.END, line + '\n', tag)
 
     def _on_treeview_click(self, event):

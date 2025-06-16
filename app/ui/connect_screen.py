@@ -129,7 +129,7 @@ class ConnectScreen:
         self.connect_window.protocol("WM_DELETE_WINDOW", self._on_window_close)
         self.treeview.bind("<Button-3>", self.show_context_menu)
         self.treeview.bind("<ButtonRelease-1>", self.on_treeview_select)
-        self.treeview.bind("<double-Button-1>", self.menu_connect)
+        self.treeview.bind("<Double-Button-1>", self.menu_connect)
         self.dropdown_database_name.bind("<Button-1>", lambda e: threading.Thread(target=self.get_databases).start())
 
     def _delete_selected_connection(self):
@@ -275,7 +275,7 @@ class ConnectScreen:
             self.on_connect_callback(connection_data)
         self.connect_window.destroy()
 
-    def menu_connect(self):
+    def menu_connect(self, event=None):
         iid = self.treeview.selection()[0]  # Obtém o ID do item selecionado
         for connection in self.connections:
             if connection["connection_id"] == iid:

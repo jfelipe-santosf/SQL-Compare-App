@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Server Compare</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f0f0f0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background-color: #ffffff;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            height: 70px;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #e0e0e0;
+        }
+
+        .btn:disabled {
+            background-color: #f5f5f5;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 10px;
+        }
+
+        .btn-large {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            margin-right: auto;
+        }
+
+        .connection-buttons {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+        }
+
+        /* Main Content */
+        .content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* TreeView */
+        .treeview-container {
+            background-color: #ffffff;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            height: 200px;
+            overflow: auto;
+        }
+
+        .treeview {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .treeview th,
+        .treeview td {
+            padding: 8px;
+            text-align: center;
+            border-bottom: 1px solid #eee;
+        }
+
+        .treeview th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        .treeview tr:hover {
+            background-color: #f5f5f5;
+        }
+
+        .treeview tr.selected {
+            background-color: #e3f2fd;
+        }
+
+        /* Code Comparison */
+        .comparison-container {
+            display: flex;
+            flex: 1;
+            margin: 5px;
+            gap: 5px;
+            min-height: 0;
+        }
+
+        .code-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 0;
+        }
+
+        .code-header {
+            padding: 8px;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .code-content {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .line-numbers {
+            background-color: #f0f0f0;
+            padding: 10px 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+            width: 40px;
+            text-align: right;
+            border-right: 1px solid #ddd;
+            overflow: hidden;
+            white-space: pre;
+        }
+
+        .code-area {
+            flex: 1;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre;
+            overflow: auto;
+            line-height: 1.4;
+        }
+
+        /* Syntax highlighting */
+        .line-added {
+            background-color: #e8f5e8;
+        }
+
+        .line-removed {
+            background-color: #ffeaea;
+        }
+
+        .line-modified {
+            background-color: #fff9e6;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #f0f0f0;
+            padding: 5px 10px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            height: 25px;
+            flex-shrink: 0;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 50px auto;
+            padding: 0;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .close {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            padding: 15px 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Connection Form */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .form-input,
+        .form-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        .form-input:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        /* Connection History */
+        .connection-history {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .connection-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .connection-item:last-child {
+            border-bottom: none;
+        }
+
+        .connection-item:hover {
+            background-color: #f5f5f5;
+        }
+
+        .connection-item.selected {
+            background-color: #e3f2fd;
+        }
+
+        .connection-info {
+            flex: 1;
+        }
+
+        .connection-server {
+            font-weight: 500;
+        }
+
+        .connection-database {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Filter Modal */
+        .filter-textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header {
+                flex-wrap: wrap;
+                height: auto;
+                padding: 10px 5px;
+            }
+
+            .connection-buttons {
+                width: 100%;
+                order: 2;
+            }
+
+            .comparison-container {
+                flex-direction: column;
+            }
+
+            .modal-content {
+                margin: 20px auto;
+                width: 95%;
+            }
+        }
+
+        /* Scrollbar Synchronization */
+        .sync-scroll {
+            overflow: hidden;
+        }
+
+        .sync-scroll::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        .sync-scroll::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .sync-scroll::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 6px;
+        }
+
+        .sync-scroll::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-controls">
+                <button class="btn btn-small" id="compareBtn" onclick="startComparison()">Compare</button>
+                <button class="btn btn-small" id="filterBtn" onclick="openFilterModal()">Filter</button>
+            </div>
+            <div class="connection-buttons">
+                <button class="btn btn-large" id="sourceBtn" onclick="openConnectionModal('source')">Select source</button>
+                <button class="btn btn-large" id="targetBtn" onclick="openConnectionModal('target')">Select target</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content">
+            <!-- TreeView -->
+            <div class="treeview-container">
+                <table class="treeview" id="differencesTable">
+                    <thead>
+                        <tr>
+                            <th>Object Name</th>
+                            <th>Object Type</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="differencesTableBody">
+                        <!-- Differences will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Code Comparison -->
+            <div class="comparison-container">
+                <div class="code-panel">
+                    <div class="code-header">Source</div>
+                    <div class="code-content">
+                        <div class="line-numbers" id="sourceLineNumbers"></div>
+                        <div class="code-area sync-scroll" id="sourceCode"></div>
+                    </div>
+                </div>
+                <div class="code-panel">
+                    <div class="code-header">Target</div>
+                    <div class="code-content">
+                        <div class="line-numbers" id="targetLineNumbers"></div>
+                        <div class="code-area sync-scroll" id="targetCode"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <span id="sourceModifiedDate">Última modificação: -</span>
+            <span id="targetModifiedDate">Última modificação: -</span>
+        </div>
+    </div>
+
+    <!-- Connection Modal -->
+    <div id="connectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Select Connection</span>
+                <span class="close" onclick="closeConnectionModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <!-- Connection History -->
+                <div class="connection-history" id="connectionHistory">
+                    <!-- Saved connections will be populated here -->
+                </div>
+
+                <!-- Connection Form -->
+                <form id="connectionForm">
+                    <div class="form-group">
+                        <label class="form-label">Server name:</label>
+                        <input type="text" class="form-input" id="serverName" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Authentication:</label>
+                        <select class="form-select" id="authentication" onchange="toggleAuthFields()">
+                            <option value="Windows Authentication">Windows Authentication</option>
+                            <option value="SQL Authentication">SQL Authentication</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">User name:</label>
+                        <input type="text" class="form-input" id="userName">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Password:</label>
+                        <input type="password" class="form-input" id="password">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Database Name:</label>
+                        <select class="form-select" id="databaseName" onclick="loadDatabases()">
+                            <option value="">Select database...</option>
+                        </select>
+                    </div>
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="rememberConnection">
+                        <label for="rememberConnection">Remember</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeConnectionModal()">Cancel</button>
+                <button class="btn" onclick="connectDatabase()">Connect</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Modal -->
+    <div id="filterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title">Filter objects by name</span>
+                <span class="close" onclick="closeFilterModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <textarea class="filter-textarea" id="filterTextarea" placeholder="Enter filter criteria here..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeFilterModal()">Cancel</button>
+                <button class="btn" onclick="applyFilter()">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentConnectionType = null;
+        let sourceConnection = null;
+        let targetConnection = null;
+        let savedConnections = JSON.parse(localStorage.getItem('savedConnections') || '[]');
+        let procedureDifferences = [];
+        let selectedDifference = null;
+
+        // Mock data for demonstration
+        const mockProcedures = {
+            source: [
+                {
+                    id: 1,
+                    procedure_name: 'sp_GetUsers',
+                    procedure_body: 'CREATE PROCEDURE sp_GetUsers\nAS\nBEGIN\n    SELECT * FROM Users\n    WHERE Active = 1\nEND',
+                    last_modified_date: '2023-11-15 14:30'
+                },
+                {
+                    id: 2,
+                    procedure_name: 'sp_UpdateUser',
+                    procedure_body: 'CREATE PROCEDURE sp_UpdateUser\n@UserID INT,\n@Name NVARCHAR(100)\nAS\nBEGIN\n    UPDATE Users SET Name = @Name WHERE ID = @UserID\nEND',
+                    last_modified_date: '2023-11-14 09:45'
+                }
+            ],
+            target: [
+                {
+                    id: 1,
+                    procedure_name: 'sp_GetUsers',
+                    procedure_body: 'CREATE PROCEDURE sp_GetUsers\nAS\nBEGIN\n    SELECT * FROM Users\n    WHERE Active = 1\n    ORDER BY Name\nEND',
+                    last_modified_date: '2023-11-14 10:00'
+                }
+            ]
+        };
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            toggleAuthFields();
+            loadConnectionHistory();
+            setupScrollSync();
+        });
+
+        // Connection Modal Functions
+        function openConnectionModal(type) {
+            currentConnectionType = type;
+            document.getElementById('connectionModal').style.display = 'block';
+            loadConnectionHistory();
+        }
+
+        function closeConnectionModal() {
+            document.getElementById('connectionModal').style.display = 'none';
+            clearConnectionForm();
+        }
+
+        function toggleAuthFields() {
+            const auth = document.getElementById('authentication').value;
+            const userNameField = document.getElementById('userName');
+            const passwordField = document.getElementById('password');
+
+            if (auth === 'Windows Authentication') {
+                userNameField.value = 'CurrentUser';
+                userNameField.disabled = true;
+                passwordField.disabled = true;
+                passwordField.value = '';
+            } else {
+                userNameField.disabled = false;
+                passwordField.disabled = false;
+                userNameField.value = '';
+            }
+        }
+
+        function loadConnectionHistory() {
+            const historyContainer = document.getElementById('connectionHistory');
+            historyContainer.innerHTML = '';
+
+            savedConnections.forEach((conn, index) => {
+                const item = document.createElement('div');
+                item.className = 'connection-item';
+                item.onclick = () => selectSavedConnection(index);
+                
+                item.innerHTML = `
+                    <div class="connection-info">
+                        <div class="connection-server">${conn.serverName}</div>
+                        <div class="connection-database">${conn.databaseName}</div>
+                    </div>
+                `;
+                
+                historyContainer.appendChild(item);
+            });
+        }
+
+        function selectSavedConnection(index) {
+            const conn = savedConnections[index];
+            document.getElementById('serverName').value = conn.serverName;
+            document.getElementById('authentication').value = conn.authentication;
+            document.getElementById('userName').value = conn.userName || '';
+            document.getElementById('password').value = conn.password || '';
+            document.getElementById('databaseName').value = conn.databaseName;
+            
+            toggleAuthFields();
+            
+            // Highlight selected connection
+            document.querySelectorAll('.connection-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            document.querySelectorAll('.connection-item')[index].classList.add('selected');
+        }
+
+        function loadDatabases() {
+            // Mock database loading
+            const databaseSelect = document.getElementById('databaseName');
+            const mockDatabases = [];
+            
+            // Clear existing options except the first one
+            databaseSelect.innerHTML = '<option value="">Select database...</option>';
+            
+            mockDatabases.forEach(db => {
+                const option = document.createElement('option');
+                option.value = db;
+                option.textContent = db;
+                databaseSelect.appendChild(option);
+            });
+        }
+
+        function connectDatabase() {
+            const formData = {
+                serverName: document.getElementById('serverName').value,
+                authentication: document.getElementById('authentication').value,
+                userName: document.getElementById('userName').value,
+                password: document.getElementById('password').value,
+                databaseName: document.getElementById('databaseName').value
+            };
+
+            // Validate form
+            if (!formData.serverName || !formData.databaseName) {
+                alert('Server name and database name are required.');
+                return;
+            }
+
+            if (formData.authentication === 'SQL Authentication' && (!formData.userName || !formData.password)) {
+                alert('User name and password are required for SQL Authentication.');
+                return;
+            }
+
+            // Save connection if remember is checked
+            if (document.getElementById('rememberConnection').checked) {
+                saveConnection(formData);
+            }
+
+            // Set connection
+            if (currentConnectionType === 'source') {
+                sourceConnection = formData;
+                document.getElementById('sourceBtn').textContent = `${formData.serverName}/${formData.databaseName}`;
+            } else {
+                targetConnection = formData;
+                document.getElementById('targetBtn').textContent = `${formData.serverName}/${formData.databaseName}`;
+            }
+
+            closeConnectionModal();
+        }
+
+        function saveConnection(connectionData) {
+            // Check if connection already exists
+            const existingIndex = savedConnections.findIndex(conn => 
+                conn.serverName === connectionData.serverName && 
+                conn.databaseName === connectionData.databaseName
+            );
+
+            if (existingIndex >= 0) {
+                savedConnections[existingIndex] = connectionData;
+            } else {
+                savedConnections.push(connectionData);
+            }
+
+            localStorage.setItem('savedConnections', JSON.stringify(savedConnections));
+        }
+
+        function clearConnectionForm() {
+            document.getElementById('connectionForm').reset();
+            document.getElementById('userName').value = 'CurrentUser';
+            document.getElementById('userName').disabled = true;
+            document.getElementById('password').disabled = true;
+            document.querySelectorAll('.connection-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+        }
+
+        // Filter Modal Functions
+        function openFilterModal() {
+            document.getElementById('filterModal').style.display = 'block';
+        }
+
+        function closeFilterModal() {
+            document.getElementById('filterModal').style.display = 'none';
+        }
+
+        function applyFilter() {
+            const filterText = document.getElementById('filterTextarea').value;
+            console.log('Filter applied:', filterText);
+            closeFilterModal();
+        }
+
+        // Comparison Functions
+        function startComparison() {
+            if (!sourceConnection || !targetConnection) {
+                alert('Please select both source and target connections.');
+                return;
+            }
+
+            // Mock comparison using sample data
+            procedureDifferences = [];
+            
+            const sourceProcs = mockProcedures.source;
+            const targetProcs = mockProcedures.target;
+            const targetProcMap = {};
+            
+            targetProcs.forEach(proc => {
+                targetProcMap[proc.procedure_name] = proc;
+            });
+
+            sourceProcs.forEach(sourceProc => {
+                const targetProc = targetProcMap[sourceProc.procedure_name];
+                
+                if (targetProc) {
+                    if (sourceProc.last_modified_date !== targetProc.last_modified_date) {
+                        const diff = compareProcedures(sourceProc.procedure_body, targetProc.procedure_body);
+                        if (diff.sourceDiff && diff.targetDiff) {
+                            procedureDifferences.push({
+                                id: sourceProc.id,
+                                procedure_name: sourceProc.procedure_name,
+                                action: 'Alter',
+                                source_body: diff.sourceDiff,
+                                target_body: diff.targetDiff,
+                                source_modified: sourceProc.last_modified_date,
+                                target_modified: targetProc.last_modified_date
+                            });
+                        }
+                    }
+                } else {
+                    procedureDifferences.push({
+                        id: sourceProc.id,
+                        procedure_name: sourceProc.procedure_name,
+                        action: 'Create',
+                        source_body: sourceProc.procedure_body.split('\n'),
+                        target_body: [],
+                        source_modified: sourceProc.last_modified_date,
+                        target_modified: '-'
+                    });
+                }
+            });
+
+            populateDifferencesTable();
+        }
+
+        function compareProcedures(source, target) {
+            const sourceLines = source.split('\n');
+            const targetLines = target.split('\n');
+            
+            // Simple diff algorithm
+            const sourceDiff = [];
+            const targetDiff = [];
+            
+            const maxLines = Math.max(sourceLines.length, targetLines.length);
+            
+            for (let i = 0; i < maxLines; i++) {
+                const sourceLine = sourceLines[i] || '';
+                const targetLine = targetLines[i] || '';
+                
+                if (sourceLine === targetLine) {
+                    sourceDiff.push('  ' + sourceLine);
+                    targetDiff.push('  ' + targetLine);
+                } else if (i >= sourceLines.length) {
+                    targetDiff.push('-- ' + targetLine);
+                } else if (i >= targetLines.length) {
+                    sourceDiff.push('++ ' + sourceLine);
+                } else {
+                    sourceDiff.push('~~ ' + sourceLine);
+                    targetDiff.push('~~ ' + targetLine);
+                }
+            }
+            
+            return { sourceDiff, targetDiff };
+        }
+
+        function populateDifferencesTable() {
+            const tbody = document.getElementById('differencesTableBody');
+            tbody.innerHTML = '';
+
+            procedureDifferences.forEach((diff, index) => {
+                const row = document.createElement('tr');
+                row.onclick = () => selectDifference(index);
+                row.innerHTML = `
+                    <td>${diff.procedure_name}</td>
+                    <td>Procedure</td>
+                    <td>${diff.action}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function selectDifference(index) {
+            selectedDifference = procedureDifferences[index];
+            
+            // Highlight selected row
+            document.querySelectorAll('.treeview tr').forEach(row => {
+                row.classList.remove('selected');
+            });
+            document.querySelectorAll('.treeview tbody tr')[index].classList.add('selected');
+            
+            displayCodeComparison();
+        }
+
+        function displayCodeComparison() {
+            if (!selectedDifference) return;
+
+            const sourceCode = document.getElementById('sourceCode');
+            const targetCode = document.getElementById('targetCode');
+            const sourceLineNumbers = document.getElementById('sourceLineNumbers');
+            const targetLineNumbers = document.getElementById('targetLineNumbers');
+
+            // Clear existing content
+            sourceCode.innerHTML = '';
+            targetCode.innerHTML = '';
+
+            // Display source code
+            selectedDifference.source_body.forEach((line, index) => {
+                const div = document.createElement('div');
+                const prefix = line.substring(0, 2);
+                const content = line.substring(2);
+                
+                div.textContent = content;
+                
+                if (prefix === '++') {
+                    div.className = 'line-added';
+                } else if (prefix === '--') {
+                    div.className = 'line-removed';
+                } else if (prefix === '~~') {
+                    div.className = 'line-modified';
+                }
+                
+                sourceCode.appendChild(div);
+            });
+
+            // Display target code
+            selectedDifference.target_body.forEach((line, index) => {
+                const div = document.createElement('div');
+                const prefix = line.substring(0, 2);
+                const content = line.substring(2);
+                
+                div.textContent = content;
+                
+                if (prefix === '++') {
+                    div.className = 'line-added';
+                } else if (prefix === '--') {
+                    div.className = 'line-removed';
+                } else if (prefix === '~~') {
+                    div.className = 'line-modified';
+                }
+                
+                targetCode.appendChild(div);
+            });
+
+            // Update line numbers
+            const maxLines = Math.max(selectedDifference.source_body.length, selectedDifference.target_body.length);
+            let lineNumbersHTML = '';
+            for (let i = 1; i <= maxLines; i++) {
+                lineNumbersHTML += i + '\n';
+            }
+            sourceLineNumbers.textContent = lineNumbersHTML;
+            targetLineNumbers.textContent = lineNumbersHTML;
+
+            // Update modification dates
+            document.getElementById('sourceModifiedDate').textContent = `Última modificação: ${selectedDifference.source_modified}`;
+            document.getElementById('targetModifiedDate').textContent = `Última modificação: ${selectedDifference.target_modified}`;
+        }
+
+        // Scroll synchronization
+        function setupScrollSync() {
+            const sourceCode = document.getElementById('sourceCode');
+            const targetCode = document.getElementById('targetCode');
+
+            sourceCode.addEventListener('scroll', function() {
+                targetCode.scrollTop = this.scrollTop;
+                targetCode.scrollLeft = this.scrollLeft;
+            });
+
+            targetCode.addEventListener('scroll', function() {
+                sourceCode.scrollTop = this.scrollTop;
+                sourceCode.scrollLeft = this.scrollLeft;
+            });
+        }
+
+        // Modal click outside to close
+        window.onclick = function(event) {
+            const connectionModal = document.getElementById('connectionModal');
+            const filterModal = document.getElementById('filterModal');
+            
+            if (event.target === connectionModal) {
+                closeConnectionModal();
+            }
+            if (event.target === filterModal) {
+                closeFilterModal();
+            }
+        }
+    </script>
+</body>
+</html>
