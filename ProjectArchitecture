@@ -1,0 +1,73 @@
+SQLCompareApp/
+	-App/
+		-Config/
+			-AppConfig.cs
+		-ComparisonEngines/
+			-ProcComparisonEngine.cs
+			-TableComparisonEngine.cs
+		-Infrastructure/
+			-DataAccess/
+				-DBConnectionFactory.cs
+				-DBSchemaReader.cs
+			-Filter/
+				-FilterRepository.cs
+				-FilterService.cs
+			-History/
+				-Generators/
+					-JsonHistoryGenerator.cs
+					-RecentComparisons.json #limite de 10 comparações recentes
+				-IHistoryService.cs
+			-Reports/
+				-Generators/
+					-TextFileGenerator.cs
+					-WinmergeFileConfigGenerator.cs
+					-XlsxReportGenerator.cs
+				-IReportGenerator.cs
+		-Service/
+			-CompareServiceBase.cs #abstract class
+			-CompareServiceFacade.cs
+		-sql_resources/
+			-SelectAllDBName.sql
+			-SelectAudit.sql
+			-SelectColumnTable.sql
+			-SelectMofiedData.sql
+			-SelectObjDefinition.sql
+			-SelectProcedures.sql
+		-Ui/
+			-ConsoleUI.cs
+		-program.cs
+		-.csproj
+	-tests
+	-.md
+	-.slnx
+
+
+
+1. Program.cs: Ponto de entrada.
+	1.1 ConsoleUI.cs: Interface de usuário para interação via console.
+		1.1.1 DBConnectionFactory.cs: Define string de conexão.
+	1.2 FilterRepository.cs: Gerencia filtros de comparação, como incluir/excluir objetos específicos.
+	1.3 FilterService.cs: Aplica os filtros definidos pelo usuário durante para a comparação.
+	1.4 AppConfig.cs: Define configurações da aplicação, como conexões de banco de dados, caminhos de arquivos, filtro a ser usado, etc.
+2. ServiceFacade.cs: Identifica o tipo de comparação (procedimentos ou tabelas) e delega a tarefa para o serviço correspondente.
+	2.1 AppConfig.cs: Acessa as configurações necessárias para a comparação, como o tipo de comparação e o filtro a ser usado.
+	2.2 CompareProceduresService.cs: Gerencia a comparação de procedimentos armazenados.
+		2.2.1 DBProcSchemaReader.cs: Lê o nome dos procedimentos armazenados do banco de dados.
+		2.2.2 FilterService.cs: Aplica os filtros definidos para a comparação atual.
+		2.2.3 DBSchemaReader.cs: Lê o esquema dos procedimentos armazenados do banco de dados.
+		2.2.4 CompareProceduresCore.cs: Contém a lógica de comparação dos procedimentos armazenados.
+	2.3 CompareTablesService.cs: Gerencia a comparação de tabelas.
+		2.3.1 DBTableSchemaReader.cs: Lê o esquema das tabelas do banco de dados.
+		2.3.2 FilterService.cs: Aplica os filtros definidos para a comparação atual.
+		2.3.3 DBSchemaReader.cs: Lê o esquema das tabelas do banco de dados.
+		2.3.4 CompareTablesCore.cs: Contém a lógica de comparação das tabelas.
+	2.4 ReportFacade.cs: Gera relatórios com base nos resultados da comparação. (para cada procedimento ou tabela diferente)
+		2.4.1 AppConfig.cs: Acessa as configurações necessárias para a geração de relatórios, como caminhos de arquivos.
+		2.4.1 TextFileGenerator.cs: Gera arquivo de texto para o schema do objeto.
+		2.4.2 WinmergeFileConfigGenerator.cs: Gera arquivos de configuração com comparações sql para o WinMerge.
+		2.4.3 XlsxReportGenerator.cs: Insere linha com um relatório com as diferenças encontradas e links para os arquivos de comparação, em formato Excel.
+3. HistoryService.cs: Gerencia o histórico de comparações realizadas, armazenando informações sobre as comparações recentes em um arquivo JSON (RecentComparisons.json) para fácil acesso e referência futura.
+	3.1 AppConfig.cs: Acessa as configurações necessárias para o gerenciamento do histórico, como o caminho do arquivo JSON.
+	3.2 RecentComparisons.json: Armazena informações sobre as comparações recentes, como data, tipo de comparação, objetos comparados e resultados. Limite de 10 comparações recentes para evitar crescimento excessivo do arquivo.
+4. Program.cs: Encerra comparação e exibe resumo dos resultados, perguntando ao usuário se deseja realizar outra comparação ou encerrar a aplicação.
+	4.1 ConsoleUI.cs: Exibe resumo dos resultados da comparação e solicita a decisão do usuário sobre realizar outra comparação ou encerrar a aplicação.

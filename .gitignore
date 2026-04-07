@@ -1,0 +1,61 @@
+# Build Folders
+bin/
+obj/
+
+# Visual Studio files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider files
+.idea/
+*.sln.iml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/packages/
+
+# Visual Studio Code
+.vscode/
+
+# MSBuild
+*.log
+*.vspscc
+*.vssscc
+
+# Dotnet
+project.assets.json
+*.pidb
+*.svclog
+*.pdb
+*.mdb
+
+# Publish output
+publish/
+
+# Package restore
+*.nuget.props
+*.nuget.targets
+
+# User-specific files
+*.dbmdl
+
+# JetBrains Rider
+.idea/
+*.sln.DotSettings.user
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup and temporary files
+*~
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
